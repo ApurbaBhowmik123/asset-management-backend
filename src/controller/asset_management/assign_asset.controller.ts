@@ -243,6 +243,12 @@ export const assignAsset = async (
                       name: true,
                     },
                   },
+                  category: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
                 },
               },
             },

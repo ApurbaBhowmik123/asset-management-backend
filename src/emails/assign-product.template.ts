@@ -252,18 +252,18 @@ export const sendAssignmentEmail = async (
                               product.uuid
                             }</td>
                             <td style="font-size: 12px; font-weight: 400; color: #000104; padding: 10px; border-bottom: 1px solid #EDEDEF;">${
-                              product.inventoryProducts.product.brand?.name ||
+                              product.grInventoryProduct?.product?.brand?.name ||
                               "N/A"
                             }</td>
                             <td style="font-size: 12px; font-weight: 400; color: #000104; padding: 10px; border-bottom: 1px solid #EDEDEF;">${
-                              product.inventoryProducts.product.name
+                              product.grInventoryProduct?.product?.name || "N/A"
                             }</td>
                             <td style="font-size: 12px; font-weight: 400; color: #000104; padding: 10px; border-bottom: 1px solid #EDEDEF;">${
-                              product.inventoryProducts.product.category
+                              product.grInventoryProduct?.product?.category
                                 ?.name || "N/A"
                             }</td>
                             <td style="font-size: 12px; font-weight: 400; color: #000104; padding: 10px; border-bottom: 1px solid #EDEDEF;">${
-                              product.inventoryProducts.product.subcategory
+                              product.grInventoryProduct?.product?.subcategory
                                 ?.name || "N/A"
                             }</td>
                             <td style="font-size: 12px; font-weight: 400; color: #000104; padding: 10px; border-bottom: 1px solid #EDEDEF;">${1}</td>
