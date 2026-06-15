@@ -1,0 +1,402 @@
+step 1:-
+if model exists in product in name case insentive search use same name for furthur processing
+model Product {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique
+  brandId        Int
+  categoryId     Int
+  subcategoryId  Int
+  name           String
+  msq            String?
+  serialNo       String?
+  costPrice      Decimal?
+  description    String?
+  lifeCycleAging Int?
+  status         Boolean  @default(true)
+  createdBy      Int?
+  updatedBy      Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  createdUser      User?                @relation("ProductCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser      User?                @relation("ProductUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  brand            Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category         Category             @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcategory      Subcategory          @relation(fields: [subcategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productSpecValue ProductSpecValue[]
+  inventoryEntries GRInventoryProduct[] @relation("ProductToInventoryProducts")
+
+  @@map("products")
+}
+if model does not exists in product table search by name->it will be case insentive
+create Product :-
+1. brandId is Make in Object :- first find using name if exists from brand table enter this id other wise create ->it will be case insentive
+model Brand {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique
+  name      String
+  status    Boolean  @default(true)
+  createdBy Int?
+  updatedBy Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdUser User?     @relation("BrandCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?     @relation("BrandUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products    Product[]
+
+  @@map("brands")
+}
+2.Use Default categoryId where name 'IT Assets'
+model Category {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  name        String
+  description String?
+  status      Boolean  @default(true)
+  createdBy   Int?
+  updatedBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdUser   User?         @relation("CategoryCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser   User?         @relation("CategoryUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcategories Subcategory[]
+  products      Product[]
+
+  @@map("categories")
+}
+3. subcategoryId is Asset Type in object -> first find using name from subcategory table if exists id other wise create ->it will be case insentive
+-> if subcategory is present then use this category Id
+model Subcategory {
+  id                    Int      @id @default(autoincrement())
+  uuid                  String   @unique @default(uuid())
+  categoryId            Int
+  name                  String
+  description           String?
+  status                Boolean  @default(true)
+  maintainanceFrequency Int?
+  createdBy             Int?
+  updatedBy             Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  createdUser User?    @relation("SubcategoryCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?    @relation("SubcategoryUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  subcategorySpecFields SubcategorySpecField[] //  manual join relation
+  products              Product[]
+
+  @@map("subcategories")
+}
+
+4.description will be description in product
+
+
+step 2:-
+
+Gr :-
+first find grDetails from table sapId object value is PO Value
+ 
+model GRDetail {
+  id            Int       @id @default(autoincrement())
+  uuid          String    @unique @default(uuid())
+  sapId         String
+  sapDate       DateTime
+  invoiceNumber String?
+  invoiceDate   DateTime?
+  grId          String
+  grDate        DateTime
+  vendorId      Int?
+
+  locationId  Int?
+  description String?
+  invoiceFile String?
+  status      Boolean  @default(true)
+  createdBy   Int
+  updatedBy   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  location Location? @relation("LocationToGRDetail", fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendor   Vendor?    @relation("VendorToGRDetail", fields: [vendorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdUser       User                 @relation("GRDetailCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser       User                 @relation("GRDetailUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventoryProducts GRInventoryProduct[] @relation("GRDetailToInventoryProducts")
+
+  @@map("gr_details")
+}
+if does not exist then create 
+1.sapId->PO Number from object 
+2.sapDate->Acquisition Date (PO)
+3.grId-> PO Value
+4.grDate->Acquisition Date (PO)
+
+
+step 3:-
+Create inventoryProducts:-
+model GRInventoryProduct {
+  id                   Int       @id @default(autoincrement())
+  uuid                 String    @unique @default(uuid())
+  grDetailsId          Int
+  productId            Int
+  quantity             Int
+  ratePerPiece         Float
+  freeQty              Int
+  description          String?
+  maintenanceFrequency String?
+  maintenanceDueDate   DateTime?
+  lifecycleExDate      DateTime?
+  warrantyTill         DateTime?
+  warrantyFile         String?
+  totalAmount          Float
+  importantLink        String?
+  invoiceFile          String?
+  status               Boolean   @default(true)
+  nextServiceDate      DateTime?
+  createdBy            Int
+  updatedBy            Int
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  grDetails        GRDetail                 @relation("GRDetailToInventoryProducts", fields: [grDetailsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product          Product                  @relation("ProductToInventoryProducts", fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser      User                     @relation("GRInventoryProductCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser      User                     @relation("GRInventoryProductUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventoryDetails InventoryProductDetail[] @relation("InventoryProductDetailToGRInventoryProduct")
+
+  @@map("gr_inventory_products")
+}
+1.grDetailsId->gr.id
+2.productId->product.id
+3.quantity->doubt
+4.ratePerPiece->doubt
+5.totalAmount->ratePerPiece*quantity
+
+step 4:-
+create Inventory InventoryProductDetail->
+model InventoryProductDetail {
+  id                     Int       @id @default(autoincrement())
+  uuid                   String    @unique @default(uuid())
+  grInventoryProductId   Int
+  serialNo1              String?
+  serialNo2              String?
+  sapCode                String?
+  isFree                 Boolean   @default(false)
+  assignedStatus         String    @default("InStock")
+  previousAssignedStatus String?
+  isUsed                 Boolean   @default(false)
+  lifecycleExDate        DateTime?
+  maintenanceDueDate     DateTime?
+  nextServiceDate        DateTime?
+  status                 Boolean   @default(true)
+  unitId                 Int?
+  createdBy              Int
+  sapCodeAddedBy         Int?
+  sapCodeAddedAt         DateTime?
+  updatedBy              Int
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  softwareInstalls     ProductSoftwareInstalls[] @relation("ProductSoftwareInstallsToProducts")
+  AssignProductDetails ProductAssignment[]
+  transferDetails      ProductTransfer[]
+  ticketAssets         TicketAsset[]
+  services             Service[]                 @relation("ServiceToInventoryProductDetail")
+  grInventoryProduct   GRInventoryProduct        @relation("InventoryProductDetailToGRInventoryProduct", fields: [grInventoryProductId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qrCode               InventoryProductQr?       @relation("InventoryProductQrToProductDetail")
+  createdUser          User                      @relation("InventoryProductDetailCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser          User                      @relation("InventoryProductDetailUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specValues           GRProductSpecValue[]      @relation("GRProductSpecValueToInventoryProductDetail")
+  sapCodeAddedByUser   User?                     @relation("InventoryProductDetailSapCodeAddedBy", fields: [sapCodeAddedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unit                 Unit?                     @relation("UnitToProductDetail", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productUnassignments ProductUnAssignment[]     @relation("ProductUnAssignmentToInventoryProductDetail")
+  productRequests      ProductRequest[]          @relation("ProductRequestInventoryProductDetails")
+
+  logs       ProductAssignmentLog[]
+  logReports LogReport[]            @relation("LogReportProduct")
+
+  @@map("inventory_products_details")
+}
+1.grInventoryProductId->inventoryProducts.id
+2.serialNo1->'Serial Number' from object
+3.sapCode->'SAP Code' from object
+4.isUsed-> true if 'In Use'
+add productSpecValue
+const specFieldMap: { [key: string]: number } = {
+  "CPU Core Count": 6,
+  "CPU Speed(GHz)": 4,
+  "Disk Space": 2,
+  "Graphics Card": 7,
+  "Memory": 1,
+  "Processor": 5,
+  "RAM": 3,
+  "SATA SSD": 8,
+};
+model GRProductSpecValue {
+  id                         Int      @id @default(autoincrement())
+  uuid                       String   @unique @default(uuid())
+  grInventoryProductDetailId Int?
+  specFieldId                Int
+  value                      String
+  status                     Boolean  @default(true)
+  createdBy                  Int
+  updatedBy                  Int
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  grInventoryProductDetail InventoryProductDetail? @relation("GRProductSpecValueToInventoryProductDetail", fields: [grInventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specField                SpecField               @relation("GRProductSpecValueToSpecField", fields: [specFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser              User                    @relation("GRProductSpecValueCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser              User                    @relation("GRProductSpecValueUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("gr_product_spec_values")
+}
+install software 
+const softwareFieldMap: { [key: string]: number } = {
+  AV: 1,
+  Proxy: 2,
+  "IP Address": 3,
+  Domain: 4,
+  "Host Name": 5,
+  "Bit Locker": 6,
+  "MAC Address": 7,
+  "OS Service Pack": 8,
+  "OS Version": 9,
+  OS: 10,
+};
+model ProductSoftwareInstalls {
+  id                         Int      @id @default(autoincrement())
+  uuid                       String   @unique @default(uuid())
+  installationId             String?
+  grInventoryProductDetailId Int?
+  softwareId                 Int
+  value                      String?
+  installedAt                DateTime @default(now())
+  installedBy                Int
+  updatedBy                  Int
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  status                     Boolean  @default(true)
+
+  createdUser User                    @relation("ProductSoftwareInstallsCreatedBy", fields: [installedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User                    @relation("ProductSoftwareInstallsUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     InventoryProductDetail? @relation("ProductSoftwareInstallsToProducts", fields: [grInventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  softwares   InstallationSoftware?   @relation("ProductSoftwareInstallsToInstallationSoftware", fields: [softwareId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_software_installs")
+}
+assigned product to user
+issuer-doubt
+approver-doubt
+create Product Assignment
+model ProductAssignment {
+  id                       Int       @id @default(autoincrement())
+  uuid                     String    @unique @default(uuid())
+  inventoryProductDetailId Int
+  assignedId               String?
+  assignedToUserId         Int?
+  assignedToLocationId     Int?
+  issuerId                 Int
+  approverId               Int?
+  productHandoverId        Int?
+  startDate                DateTime
+  endDate                  DateTime?
+  isExtended               Boolean   @default(false)
+  status                   String    @default("Active")
+  notes                    String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  // Relations
+  inventoryProductDetail InventoryProductDetail @relation(fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedToUser         User?                  @relation("ProductAssignedToUser", fields: [assignedToUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedToLocation     Location?              @relation(fields: [assignedToLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issuer                 User                   @relation("ProductIssuedBy", fields: [issuerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver               User?                  @relation("ProductApprovedBy", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productHandover        ProductHandover?       @relation(fields: [productHandoverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  logs                   ProductAssignmentLog[]
+
+  @@map("product_assignments")
+}
+node js prisma typescript mysql please do it effeciently and apply best practice
+[
+        {
+            "User Name": "User_1",
+            "Asset Type": "Type_1",
+            "Serial Number": "SN_1000",
+            "Description": "Description for asset 1",
+            "Asset Tag": "AT_2000",
+            "Used By(Email)": "user1@example.com",
+            "SAP Code": 1000000000,
+            "Acquisition Date (PO)": "21/08/2025",
+            "Department": "Dept_1",
+            "Location": "Location_1",
+            "Assigned On": "Assigned On_1",
+            "Make": "Make_1",
+            "Model": "Model_1",
+            "Serial Number.1": "Serial Number.1_1",
+            "OS": "OS_1",
+            "OS Version": "OS Version_1",
+            "OS Service Pack": "OS Service Pack_1",
+            "Memory": "Memory_1",
+            "Disk Space(GB)": "Disk Space(GB)_1",
+            "CPU Speed(GHz)": "CPU Speed(GHz)_1",
+            "CPU Core Count": "CPU Core Count_1",
+            "MAC Address": "MAC Address_1",
+            "Bitlocker": "Bitlocker_1",
+            "Hostname": "Hostname_1",
+            "IP Address": "10.0.0.1",
+            "Asset State": "State_1",
+            "PO Value": 50000,
+            "PO Number": "PO_3000",
+            "Warranty/AMC": "AMC_1",
+            "Warranty Expiry Date": "21/08/2025",
+            "Domain": "Domain_1",
+            "Last Audit Date": "21/08/2025",
+            "AV": "AV_1",
+            "Proxy": "Proxy_1"
+        },
+        {
+            "User Name": "User_2",
+            "Asset Type": "Type_2",
+            "Serial Number": "SN_1001",
+            "Description": "Description for asset 2",
+            "Asset Tag": "AT_2001",
+            "Used By(Email)": "user2@example.com",
+            "SAP Code": 1000000001,
+            "Acquisition Date (PO)": "02/07/2025",
+            "Department": "Dept_2",
+            "Location": "Location_2",
+            "Assigned On": "Assigned On_2",
+            "Make": "Make_2",
+            "Model": "Model_2",
+            "Serial Number.1": "Serial Number.1_2",
+            "OS": "OS_2",
+            "OS Version": "OS Version_2",
+            "OS Service Pack": "OS Service Pack_2",
+            "Memory": "Memory_2",
+            "Disk Space(GB)": "Disk Space(GB)_2",
+            "CPU Speed(GHz)": "CPU Speed(GHz)_2",
+            "CPU Core Count": "CPU Core Count_2",
+            "MAC Address": "MAC Address_2",
+            "Bitlocker": "Bitlocker_2",
+            "Hostname": "Hostname_2",
+            "IP Address": "10.0.0.2",
+            "Asset State": "State_2",
+            "PO Value": 51000,
+            "PO Number": "PO_3001",
+            "Warranty/AMC": "AMC_2",
+            "Warranty Expiry Date": "29/11/2025",
+            "Domain": "Domain_2",
+            "Last Audit Date": "22/07/2025",
+            "AV": "AV_2",
+            "Proxy": "Proxy_2"
+        }
+		]

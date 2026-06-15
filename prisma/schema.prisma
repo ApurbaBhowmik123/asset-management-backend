@@ -1,0 +1,1210 @@
+ generator client {
+   provider = "prisma-client-js"
+   output   = "./generated/prisma"
+ }
+
+ datasource db {
+   provider = "mysql"
+   url      = env("DATABASE_URL")
+ }
+
+model User {
+  id            Int       @id @default(autoincrement())
+  uuid          String    @unique
+  email         String?   
+  name          String?
+  username      String?
+  designation   String?
+  departmentId  Int?
+  locationId    Int?
+  dateOfBirth   DateTime?
+  avatar        String?
+  mobile_prefix String    @default("+91")
+  mobile        String?
+  unitId        Int?
+  about         String?   @db.Text
+  password      String
+  status        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unit       Unit?       @relation("UnitUsers", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles      Role[]      @relation("userroles")
+
+  // Units relations
+  unitsCreated Unit[] @relation("UnitCreatedBy")
+  unitsUpdated Unit[] @relation("UnitUpdatedBy")
+
+  // Department relations
+  departmentsCreated Department[] @relation("DepartmentCreatedBy")
+  departmentsUpdated Department[] @relation("DepartmentUpdatedBy")
+
+  // Vendor relations
+  vendorsCreated Vendor[] @relation("VendorCreatedBy")
+  vendorsUpdated Vendor[] @relation("VendorUpdatedBy")
+
+  // Brand relations
+  brandsCreated Brand[] @relation("BrandCreatedBy")
+  brandsUpdated Brand[] @relation("BrandUpdatedBy")
+
+  // Category relations
+  categoriesCreated Category[] @relation("CategoryCreatedBy")
+  categoriesUpdated Category[] @relation("CategoryUpdatedBy")
+
+  // Subcategory relations
+  subcategoriesCreated Subcategory[] @relation("SubcategoryCreatedBy")
+  subcategoriesUpdated Subcategory[] @relation("SubcategoryUpdatedBy")
+
+  // SpecField relations
+  specFieldsCreated SpecField[] @relation("SpecFieldCreatedBy")
+  specFieldsUpdated SpecField[] @relation("SpecFieldUpdatedBy")
+
+  // SpecFieldOption relations
+  specFieldOptionsCreated SpecFieldOption[] @relation("SpecFieldOptionCreatedBy")
+  specFieldOptionsUpdated SpecFieldOption[] @relation("SpecFieldOptionUpdatedBy")
+
+  // Product relations
+  productCreated Product[] @relation("ProductCreatedBy")
+  productUpdated Product[] @relation("ProductUpdatedBy")
+
+  // Product Spec Value
+  productSpecValueCreated ProductSpecValue[] @relation("ProductSpecValueCreatedBy")
+  productSpecValueUpdated ProductSpecValue[] @relation("ProductSpecValueUpdatedBy")
+
+  //GR Details
+  createdGRDetails GRDetail[] @relation("GRDetailCreatedBy")
+  updatedGRDetails GRDetail[] @relation("GRDetailUpdatedBy")
+
+  //GR Inventory Product
+  createdGRInventoryProducts GRInventoryProduct[] @relation("GRInventoryProductCreatedBy")
+  updatedGRInventoryProducts GRInventoryProduct[] @relation("GRInventoryProductUpdatedBy")
+
+  //GR Product Spec Value
+  createdGRProductSpecValues GRProductSpecValue[] @relation("GRProductSpecValueCreatedBy")
+  updatedGRProductSpecValues GRProductSpecValue[] @relation("GRProductSpecValueUpdatedBy")
+
+  //Inventory Product Detail
+  createdInventoryProductDetails InventoryProductDetail[] @relation("InventoryProductDetailCreatedBy")
+  updatedInventoryProductDetails InventoryProductDetail[] @relation("InventoryProductDetailUpdatedBy")
+
+  // Address relations
+  addressCreated Address[] @relation("AddressCreatedBy")
+  addressUpdated Address[] @relation("AddressUpdatedBy")
+
+  // ProductSoftwareInstalls relations
+  productSoftwareInstallsCreated ProductSoftwareInstalls[] @relation("ProductSoftwareInstallsCreatedBy")
+  productSoftwareInstallsUpdated ProductSoftwareInstalls[] @relation("ProductSoftwareInstallsUpdatedBy")
+
+  // InstallationSoftware relations
+  installationSoftwareCreated InstallationSoftware[] @relation("InstallationSoftwareCreatedBy")
+  installationSoftwareUpdated InstallationSoftware[] @relation("InstallationSoftwareUpdatedBy")
+
+  //ProductAssignment
+  productAssignIssuer         ProductAssignment[] @relation("ProductIssuedBy")
+  productAssignApprover       ProductAssignment[] @relation("ProductApprovedBy")
+  productAssignAssignedToUser ProductAssignment[] @relation("ProductAssignedToUser")
+
+  //ProductAssignmentLog
+  productAssignmentPerformedBy ProductAssignmentLog[] @relation("ProductAssignmentPerformedBy")
+
+  //ProductHandover
+  productUserHandovers   ProductHandover[] @relation("UserHandovers")
+  productIssuerHandovers ProductHandover[] @relation("IssuerHandovers")
+
+  //Location
+  locationCreated Location[] @relation("LocationCreatedBy")
+  locationUpdated Location[] @relation("LocationUpdatedBy")
+
+  location Location? @relation("UserLocation", fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  //UnitLocation
+  unitLocationCreated UnitLocation[] @relation("UnitsLocationCreatedBy")
+  unitLocationUpdated UnitLocation[] @relation("UnitsLocationUpdatedBy")
+
+  // Ticket
+  ticketCreated         Ticket[] @relation("CreatedByUser")
+  ticketUpdated         Ticket[] @relation("UpdatedByUser")
+  ticketApproved        Ticket[] @relation("ApprovedByUser")
+  ticketSupportEngineer Ticket[] @relation("SupportEngineerUser")
+
+  // service 
+  serviceCreated Service[] @relation("ServiceCreatedBy")
+  serviceUpdated Service[] @relation("ServiceUpdatedBy")
+
+  logsCreated Log[] @relation("LogsCreatedBy")
+
+  productTransferIssuedBy   ProductTransfer[] @relation("issuedBy")
+  productTransferApprovedBy ProductTransfer[] @relation("approvedBy")
+  productTransferCreatedBy  ProductTransfer[] @relation("createdBy")
+  productTransferUpdatedBy  ProductTransfer[] @relation("updatedBy")
+
+  productUnassignmentsCreated   ProductUnAssignment[] @relation("ProductUnAssignedByUser")
+  productUnassignmentApprovedBy ProductUnAssignment[] @relation("ProductUnAssignedApprovedByUser")
+
+  productAcceptancesApprovedBy ProductTranserAccept[]   @relation("ProductAcceptanceApprovedByUser")
+  sapCodedAddedBy              InventoryProductDetail[] @relation("InventoryProductDetailSapCodeAddedBy")
+
+  logReportCreatedBy LogReport[] @relation("LogReportCreatedBy")
+
+  productRequestCreatedBy  ProductRequest[] @relation("ProductRequestCreatedBy")
+  productRequestApprovedBy ProductRequest[] @relation("ProductRequestApprovedBy")
+
+  notificationTo   Notification[]       @relation("NotificationUser")
+  softCreatedBy    SoftWare[]           @relation("SoftwareCreatedBy")
+  softUpdatedBy    SoftWare[]           @relation("SoftwareUpdatedBy")
+  softAssignedTo   SoftWareAssignment[] @relation("SoftwareAssignedTo")
+  softLogs         SoftWareLog[]        @relation("SoftwareLogUser")
+  softwareAssigned SoftWareAssignment[] @relation("SoftwareAssignedBy")
+
+  EwasteRequestApprove  EwasteRequestApprove[] @relation("EwasteApprovedCreatedBy")
+  EwasteRequestReviewer EwasteRequestApprove[] @relation("EwasteApprovedReviewedBy")
+  EwasteRequestApprover EwasteRequestApprove[] @relation("EwasteApprovedApprovedBy")
+  EwasteRequestIssuer   EwasteRequestApprove[] @relation("EwasteApprovedIssuedBy")
+
+  mailConfigsUnitAdmin  MailConfig[] @relation("MailConfigUnitAdmin")
+  mailConfigsSuperAdmin MailConfig[] @relation("MailConfigSuperAdmin")
+  mailConfigsCreatedBy  MailConfig[] @relation("MailConfigCreatedBy")
+  mailConfigsUpdatedBy  MailConfig[] @relation("MailConfigUpdatedBy")
+
+  @@map("users")
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String
+  slug        String       @unique
+  status      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  permissions Permission[] @relation("rolepermissions")
+  users       User[]       @relation("userroles")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  roles       Role[]   @relation("rolepermissions")
+
+  @@map("permissions")
+}
+
+model Unit {
+  id                   Int      @id @default(autoincrement())
+  uuid                 String   @unique
+  name                 String   @unique
+  identificationNumber String?
+  abbriviatedName      String?
+  description          String?
+  addressId            Int?
+  status               Boolean  @default(true)
+  createdBy            Int?
+  updatedBy            Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  address                Address?                 @relation("UnitAddress", fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdUser            User?                    @relation("UnitCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser            User?                    @relation("UnitUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unitlocation           UnitLocation[]           @relation("UnitWithLocation")
+  users                  User[]                   @relation("UnitUsers")
+  inventoryProductDetail InventoryProductDetail[] @relation("UnitToProductDetail")
+  tickets                Ticket[]                 @relation("Unit")
+  productTransferFrom    ProductTransfer[]        @relation("productTransferForm")
+  productTransferTo      ProductTransfer[]        @relation("productTransferTo")
+  mailConfigs            MailConfig[]             @relation("MailConfigUnit")
+
+  @@map("units")
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique
+  name        String   @unique
+  description String?
+  status      Boolean  @default(true)
+  createdBy   Int?
+  updatedBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdUser User?  @relation("DepartmentCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?  @relation("DepartmentUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users       User[]
+
+  @@map("departments")
+}
+
+model Vendor {
+  id                   Int      @id @default(autoincrement())
+  uuid                 String   @unique
+  identificationNumber String?
+  name                 String   @unique
+  email                String?
+  gstNumber            String?
+  vendorType           String?
+  mobile               String?
+  addressId            Int?
+  contactPerson        String?
+  contactNumber        String?
+  bankName             String?
+  bankAccountNumber    String?
+  bankIfscCode         String?
+  panNumber            String?
+  status               Boolean  @default(true)
+  createdBy            Int?
+  updatedBy            Int?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  address     Address?   @relation("VendorAddress", fields: [addressId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  createdUser User?      @relation("VendorCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?      @relation("VendorUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  grDetails   GRDetail[] @relation("VendorToGRDetail")
+
+  @@map("vendors")
+}
+
+model Brand {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique
+  name      String
+  status    Boolean  @default(true)
+  createdBy Int?
+  updatedBy Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdUser User?     @relation("BrandCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?     @relation("BrandUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products    Product[]
+
+  @@map("brands")
+}
+
+model Category {
+  id                    Int      @id @default(autoincrement())
+  uuid                  String   @unique @default(uuid())
+  name                  String
+  description           String?
+  assetType             String   @default("PHYSICAL") // PHYSICAL or DIGITAL
+  trackingType          String   @default("TRACKABLE") // TRACKABLE or NON_TRACKABLE
+  abbriviatedName       String?
+  maintainanceFrequency Int?
+  status                Boolean  @default(true)
+  createdBy             Int?
+  updatedBy             Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  createdUser        User?               @relation("CategoryCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser        User?               @relation("CategoryUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcategories      Subcategory[]
+  products           Product[]
+  categorySpecFields CategorySpecField[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id                    Int      @id @default(autoincrement())
+  uuid                  String   @unique @default(uuid())
+  categoryId            Int
+  name                  String
+  description           String?
+  abbriviatedName       String?
+  status                Boolean  @default(true)
+  maintainanceFrequency Int?
+  createdBy             Int?
+  updatedBy             Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  createdUser User?    @relation("SubcategoryCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?    @relation("SubcategoryUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  subcategorySpecFields SubcategorySpecField[] //  manual join relation
+  @@map("subcategories")
+}
+
+model SpecField {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  name        String
+  fieldType   String
+  unit        String?
+  isRequired  Boolean  @default(false)
+  description String?
+  status      Boolean  @default(true)
+  createdBy   Int?
+  updatedBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdUser User? @relation("SpecFieldCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User? @relation("SpecFieldUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  subcategorySpecFields SubcategorySpecField[] //  manual join relation
+  categorySpecFields    CategorySpecField[]    //  category join relation
+  options               SpecFieldOption[]
+  productSpecValue      ProductSpecValue[]
+  grProductSpecValues   GRProductSpecValue[]   @relation("GRProductSpecValueToSpecField")
+
+  @@map("spec_fields")
+}
+
+//  This is your explicit join table
+model SubcategorySpecField {
+  subcategoryId Int
+  specFieldId   Int
+
+  subcategory Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specField   SpecField   @relation(fields: [specFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([subcategoryId, specFieldId])
+}
+
+// Category-SpecField join table (replaces subcategory-based spec linking)
+model CategorySpecField {
+  categoryId  Int
+  specFieldId Int
+
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specField SpecField  @relation(fields: [specFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([categoryId, specFieldId])
+  @@map("category_spec_fields")
+}
+
+model SpecFieldOption {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  specFieldId Int
+  value       String
+  status      Boolean  @default(true)
+  createdBy   Int?
+  updatedBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdUser User?     @relation("SpecFieldOptionCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?     @relation("SpecFieldOptionUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specField   SpecField @relation(fields: [specFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("spec_field_options")
+}
+
+// subcategoryId  Int?
+
+model Product {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique
+  brandId        Int
+  categoryId     Int
+  name           String
+  msq            String?
+  serialNo       String?
+  costPrice      Decimal?
+  description    String?
+  lifeCycleAging Int?
+  status         Boolean  @default(true)
+  createdBy      Int?
+  updatedBy      Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  createdUser      User?                @relation("ProductCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser      User?                @relation("ProductUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  brand            Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category         Category             @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productSpecValue ProductSpecValue[]
+  inventoryEntries GRInventoryProduct[] @relation("ProductToInventoryProducts")
+
+  @@map("products")
+}
+
+model ProductSpecValue {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  productId   Int
+  specFieldId Int
+  value       String
+  status      Boolean  @default(true)
+  createdBy   Int?
+  updatedBy   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdUser User?     @relation("ProductSpecValueCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?     @relation("ProductSpecValueUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specField   SpecField @relation(fields: [specFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_spec_values")
+}
+
+model GRDetail {
+  id            Int       @id @default(autoincrement())
+  uuid          String    @unique @default(uuid())
+  sapId         String?
+  sapDate       DateTime?
+  invoiceNumber String?
+  invoiceDate   DateTime?
+  grId          String?
+  grDate        DateTime?
+  vendorId      Int?
+
+  description String?
+  invoiceFile String?
+  isTagged    Boolean  @default(false)
+  status      Boolean  @default(true)
+  createdBy   Int
+  updatedBy   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor            Vendor?              @relation("VendorToGRDetail", fields: [vendorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser       User                 @relation("GRDetailCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser       User                 @relation("GRDetailUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventoryProducts GRInventoryProduct[] @relation("GRDetailToInventoryProducts")
+
+  @@map("gr_details")
+}
+
+model GRInventoryProduct {
+  id                   Int       @id @default(autoincrement())
+  uuid                 String    @unique @default(uuid())
+  grDetailsId          Int
+  productId            Int
+  quantity             Int
+  ratePerPiece         Float
+  freeQty              Int
+  description          String?
+  maintenanceFrequency String?
+  maintenanceDueDate   DateTime?
+  lifecycleExDate      DateTime?
+  warrantyTill         DateTime?
+  warrantyFile         String?
+  totalAmount          Float
+  importantLink        String?
+  invoiceFile          String?
+  status               Boolean   @default(true)
+  nextServiceDate      DateTime?
+  createdBy            Int
+  updatedBy            Int
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  grDetails        GRDetail                 @relation("GRDetailToInventoryProducts", fields: [grDetailsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product          Product                  @relation("ProductToInventoryProducts", fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser      User                     @relation("GRInventoryProductCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser      User                     @relation("GRInventoryProductUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventoryDetails InventoryProductDetail[] @relation("InventoryProductDetailToGRInventoryProduct")
+
+  @@map("gr_inventory_products")
+}
+
+model GRProductSpecValue {
+  id                         Int      @id @default(autoincrement())
+  uuid                       String   @unique @default(uuid())
+  grInventoryProductDetailId Int?
+  specFieldId                Int
+  value                      String
+  status                     Boolean  @default(true)
+  createdBy                  Int
+  updatedBy                  Int
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  grInventoryProductDetail InventoryProductDetail? @relation("GRProductSpecValueToInventoryProductDetail", fields: [grInventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specField                SpecField               @relation("GRProductSpecValueToSpecField", fields: [specFieldId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser              User                    @relation("GRProductSpecValueCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser              User                    @relation("GRProductSpecValueUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("gr_product_spec_values")
+}
+
+model InventoryProductDetail {
+  id                     Int       @id @default(autoincrement())
+  uuid                   String    @unique @default(uuid())
+  grInventoryProductId   Int
+  serialNo1              String?
+  serialNo2              String?
+  sapCode                String?
+  isFree                 Boolean   @default(false)
+  assignedStatus         String    @default("InStock")
+  previousAssignedStatus String?
+  isUsed                 Boolean   @default(false)
+  lifecycleExDate        DateTime?
+  maintenanceDueDate     DateTime?
+  nextServiceDate        DateTime?
+  status                 Boolean   @default(true)
+  installationStatus     Boolean   @default(false)
+  locationId             Int?
+  unitId                 Int?
+  createdBy              Int
+  sapCodeAddedBy         Int?
+  sapCodeAddedAt         DateTime?
+  updatedBy              Int
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  softwareInstalls     ProductSoftwareInstalls[] @relation("ProductSoftwareInstallsToProducts")
+  AssignProductDetails ProductAssignment[]
+  transferDetails      ProductTransfer[]
+  ticketAssets         TicketAsset[]
+  services             Service[]                 @relation("ServiceToInventoryProductDetail")
+  grInventoryProduct   GRInventoryProduct        @relation("InventoryProductDetailToGRInventoryProduct", fields: [grInventoryProductId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qrCode               InventoryProductQr?       @relation("InventoryProductQrToProductDetail")
+  createdUser          User                      @relation("InventoryProductDetailCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser          User                      @relation("InventoryProductDetailUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  specValues           GRProductSpecValue[]      @relation("GRProductSpecValueToInventoryProductDetail")
+  location             Location?                 @relation("LocationToInventoryProductDetail", fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  sapCodeAddedByUser   User?                 @relation("InventoryProductDetailSapCodeAddedBy", fields: [sapCodeAddedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unit                 Unit?                 @relation("UnitToProductDetail", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productUnassignments ProductUnAssignment[] @relation("ProductUnAssignmentToInventoryProductDetail")
+  productRequests      ProductRequest[]      @relation("ProductRequestInventoryProductDetails")
+
+  logs       ProductAssignmentLog[]
+  logReports LogReport[]            @relation("LogReportProduct")
+
+  @@map("inventory_products_details")
+}
+
+model InventoryProductQr {
+  id                       Int    @id @default(autoincrement())
+  uuid                     String @unique @default(uuid())
+  inventoryProductDetailId Int    @unique
+  qrCodeUrl                String
+
+  inventoryProductDetail InventoryProductDetail @relation("InventoryProductQrToProductDetail", fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model InstallationSoftware {
+  id        Int      @id @default(autoincrement())
+  uuid      String   @unique @default(uuid())
+  name      String
+  version   String?
+  status    Boolean  @default(true)
+  required  Boolean  @default(true)
+  createdBy Int
+  updatedBy Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdUser           User                      @relation("InstallationSoftwareCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser           User                      @relation("InstallationSoftwareUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productInstalledSofts ProductSoftwareInstalls[] @relation("ProductSoftwareInstallsToInstallationSoftware")
+
+  @@map("installation_softwares")
+}
+
+model ProductSoftwareInstalls {
+  id                         Int      @id @default(autoincrement())
+  uuid                       String   @unique @default(uuid())
+  installationId             String?
+  grInventoryProductDetailId Int?
+  softwareId                 Int
+  value                      String?
+  installedAt                DateTime @default(now())
+  installedBy                Int
+  updatedBy                  Int
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  status                     Boolean  @default(true)
+
+  createdUser User                    @relation("ProductSoftwareInstallsCreatedBy", fields: [installedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User                    @relation("ProductSoftwareInstallsUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product     InventoryProductDetail? @relation("ProductSoftwareInstallsToProducts", fields: [grInventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  softwares   InstallationSoftware?   @relation("ProductSoftwareInstallsToInstallationSoftware", fields: [softwareId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_software_installs")
+}
+
+model ProductAssignment {
+  id                       Int       @id @default(autoincrement())
+  uuid                     String    @unique @default(uuid())
+  inventoryProductDetailId Int
+  assignedId               String?
+  assignedToUserId         Int?
+  assignedToLocationId     Int?
+  issuerId                 Int
+  approverId               Int?
+  productHandoverId        Int?
+  startDate                DateTime
+  endDate                  DateTime?
+  isExtended               Boolean   @default(false)
+  status                   String    @default("Active")
+  notes                    String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  // Relations
+  inventoryProductDetail InventoryProductDetail @relation(fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedToUser         User?                  @relation("ProductAssignedToUser", fields: [assignedToUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedToLocation     Location?              @relation(fields: [assignedToLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issuer                 User                   @relation("ProductIssuedBy", fields: [issuerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver               User?                  @relation("ProductApprovedBy", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productHandover        ProductHandover?       @relation(fields: [productHandoverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  logs                   ProductAssignmentLog[]
+
+  @@map("product_assignments")
+}
+
+model ProductAssignmentLog {
+  id                       Int      @id @default(autoincrement())
+  uuid                     String   @unique @default(uuid())
+  assignmentId             Int
+  inventoryProductDetailId Int
+  action                   String
+  performedById            Int
+  note                     String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  // Relations
+  assignment             ProductAssignment      @relation(fields: [assignmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventoryProductDetail InventoryProductDetail @relation(fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  performedBy            User                   @relation("ProductAssignmentPerformedBy", fields: [performedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_assignment_logs")
+}
+
+model ProductUnAssignment {
+  id                       Int      @id @default(autoincrement())
+  uuid                     String   @unique @default(uuid())
+  inventoryProductDetailId Int
+  approvedById             Int
+  unassignmentDate         DateTime
+  remarks                  String?
+  createdById              Int
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  // Relations
+  inventoryProductDetail InventoryProductDetail @relation("ProductUnAssignmentToInventoryProductDetail", fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedBy             User                   @relation("ProductUnAssignedApprovedByUser", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy              User                   @relation("ProductUnAssignedByUser", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_un_assignments")
+}
+
+model Location {
+  id                   Int      @id @default(autoincrement())
+  uuid                 String   @unique @default(uuid())
+  identificationNumber String?
+  abbriviatedName      String?
+  name                 String
+  description          String?
+  address              String? 
+  image                String?
+  createdBy            Int
+  updatedBy            Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  createdUser         User                @relation("LocationCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser         User                @relation("LocationUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unitlocation        UnitLocation[]      @relation("LocationWithUnit")
+  assignments         ProductAssignment[]
+  productTransferFrom ProductTransfer[]   @relation("productTransferLocationForm")
+  productTransferTo   ProductTransfer[]   @relation("productTransferLocationTo")
+
+  users                   User[]                   @relation("UserLocation")
+  inventoryProductDetails InventoryProductDetail[] @relation("LocationToInventoryProductDetail")
+
+  @@map("locations")
+}
+
+model ProductHandover {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  userId       Int
+  issuerId     Int
+  handoverDate DateTime @default(now())
+
+  pdfFile       String?
+  signatureFile String?
+  isCompleted   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User                @relation("UserHandovers", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issuer      User                @relation("IssuerHandovers", fields: [issuerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignments ProductAssignment[]
+
+  @@map("product_handovers")
+}
+
+model Ticket {
+  id                        Int       @id @default(autoincrement())
+  uuid                      String    @unique
+  subjectLine               String?
+  type                      String?
+  userId                    Int
+  unitId                    Int?
+  supportAdminId            Int?
+  updatedById               Int?
+  supportEngineerId         Int?
+  attachment                String?
+  ratings                   Float?
+  reviews                   String?
+  status                    String?
+  priority                  String?
+  rejectReason              String?
+  supportEngineerAssignedAt DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  completedAt               DateTime?
+  categoryId                Int?
+  subcategoryId             Int?
+
+  // Relations
+  createdBy       User               @relation("CreatedByUser", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedBy       User?              @relation("UpdatedByUser", fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvedBy      User?              @relation("ApprovedByUser", fields: [supportAdminId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supportEngineer User?              @relation("SupportEngineerUser", fields: [supportEngineerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unit            Unit?              @relation("Unit", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category        TicketCategory?    @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subcategory     TicketSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  ticketAssets TicketAsset[]
+
+  @@map("tickets")
+}
+
+model TicketCategory {
+  id            Int                 @id @default(autoincrement())
+  uuid          String              @unique @default(uuid())
+  type          String?
+  name          String
+  description   String?
+  subcategories TicketSubcategory[]
+  tickets       Ticket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ticket_categories")
+}
+
+model TicketSubcategory {
+  id          Int            @id @default(autoincrement())
+  uuid        String         @unique @default(uuid())
+  name        String
+  description String?
+  categoryId  Int
+  category    TicketCategory @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tickets     Ticket[]
+
+  @@map("ticket_subcategories")
+}
+
+model TicketAsset {
+  id       Int  @id @default(autoincrement())
+  ticketId Int
+  assetId  Int?
+
+  repairCost     Int?
+  status         String?
+  serviceRemarks String?
+  createdAt      DateTime @default(now())
+
+  ticket Ticket                  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  asset  InventoryProductDetail? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  //for ticket compatibility
+  // @@unique([ticketId, assetId])
+  @@map("ticket_assets")
+}
+
+model UnitLocation {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique @default(uuid())
+  unitId     Int
+  locationId Int
+  status     Boolean  @default(true)
+  createdBy  Int
+  updatedBy  Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  unit        Unit     @relation("UnitWithLocation", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  location    Location @relation("LocationWithUnit", fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser User     @relation("UnitsLocationCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User     @relation("UnitsLocationUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("unit_locations")
+}
+
+model Log {
+  id               Int     @id @default(autoincrement())
+  uuid             String  @unique @default(uuid())
+  action           String
+  userId           Int?
+  relatedModelType String?
+  relatedModelId   Int?
+  // for mysql server
+  // details          String? @db.LongText
+  details          String?
+  actionUrl        String?
+  type             String?
+  assetId          Int?
+
+  createdUser User?    @relation("LogsCreatedBy", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logReport LogReport[] @relation("LogReport")
+
+  @@map("logs")
+}
+
+model LogReport {
+  id            Int    @id @default(autoincrement())
+  uuid          String @unique @default(uuid())
+  logId         Int?
+  transactionId String
+  productId     Int
+  // for mysql
+  // logReportDetails String? @db.LongText
+
+  logReportDetails String?
+
+  transactionlink String?
+  transactionDate DateTime
+  transactionType String
+  productStatus   String?
+  createdBy       Int
+  cost            Float?   @default(0.0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  log           Log?                   @relation("LogReport", fields: [logId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product       InventoryProductDetail @relation("LogReportProduct", fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser User                   @relation("LogReportCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("log_reports")
+}
+
+model ProductTransfer {
+  id                       Int      @id @default(autoincrement())
+  uuid                     String   @unique @default(uuid())
+  inventoryProductDetailId Int
+  transferId               String
+  sourceUnitId             Int
+  sourceLocationId         Int
+  destinationUnitId        Int
+  destinationLocationId    Int
+  issuerId                 Int
+  approverId               Int
+  status                   String
+  productTransferAcceptId  Int?
+  remarks                  String?
+  transferDate             DateTime
+  createdBy                Int
+  updateBy                 Int
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  //Relations
+  inventoryProductDetails   InventoryProductDetail @relation(fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sourceUnit                Unit                   @relation("productTransferForm", fields: [sourceUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sourceUnitLocation        Location               @relation("productTransferLocationForm", fields: [sourceLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  destinationUnit           Unit                   @relation("productTransferTo", fields: [destinationUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  destinationUnitLocation   Location               @relation("productTransferLocationTo", fields: [destinationLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issuer                    User                   @relation("issuedBy", fields: [issuerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver                  User                   @relation("approvedBy", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser             User                   @relation("createdBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser             User                   @relation("updatedBy", fields: [updateBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productTransferAcceptance ProductTranserAccept?  @relation(fields: [productTransferAcceptId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_transfers")
+}
+
+model ProductTranserAccept {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  approverId  Int
+  issuerId    Int
+  approveDate DateTime
+
+  pdfFile        String?
+  signaturedFile String?
+
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  productTransfer ProductTransfer[]
+
+  approvedBy User @relation("ProductAcceptanceApprovedByUser", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_transfer_acceptance")
+}
+
+model Service {
+  id                             Int       @id @default(autoincrement())
+  uuid                           String    @unique @default(uuid())
+  inventoryProductDetailId       Int
+  nextServiceDate                DateTime?
+  harddiskCheck                  String?
+  monitorCheck                   String?
+  tcpipCheck                     String?
+  latestVersionOfOsUpdate        String?
+  azurejoinandDomainCheck        Boolean?  @default(false)
+  adPolicyCheck                  Boolean?  @default(false)
+  zscalerandDnsCheck             Boolean?  @default(false)
+  deviceManagerCheck             Boolean?  @default(false)
+  hDDPerformanceCheck            Boolean?  @default(false)
+  systemDriverStatusCheck        Boolean?  @default(false)
+  memorySpeedCheck               Boolean?  @default(false)
+  laptopBatteryCheck             Boolean?  @default(false)
+  zscalerProxyVerUpgrade         String?
+  applicationLicenseCheck        Boolean?  @default(false)
+  applicationOffice              String?
+  antivirusStatusCheck           Boolean?  @default(false)
+  antiVirusPolicyCheck           Boolean?  @default(false)
+  systemScanAndLogCheck          Boolean?  @default(false)
+  wsusPatchRelease               String?
+  intuneApplicationCheck         Boolean?  @default(false)
+  unWantedapplicationTobeRemoved String?
+  tempRefetchPrefetchtobeDeleted String?
+  startupToBeConfigured          String?
+  bitLockerCheck                 String?
+  backupSolutionCheck            String?
+  mouseKeyboardStatus            Boolean?  @default(false)
+  createdBy                      Int?
+  updatedBy                      Int?
+  createdAt                      DateTime  @default(now())
+  updatedAt                      DateTime  @updatedAt
+  servicingCost                  Float?    @default(0.0)
+  servicingRemarks               String?
+
+  //for mysql
+  // installationDetails   String? @db.LongText
+  // specificationsDetails String? @db.LongText
+
+  installationDetails    String?                
+  specificationsDetails  String?                
+  // Relations
+  createdUser            User?                  @relation("ServiceCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser            User?                  @relation("ServiceUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventoryProductDetail InventoryProductDetail @relation("ServiceToInventoryProductDetail", fields: [inventoryProductDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("asset_services")
+}
+
+model Address {
+  id           Int      @id @default(autoincrement())
+  addressLine1 String
+  addressLine2 String?
+  addressLine3 String?
+  buildingName String?
+  unitNumber   String?
+  floor        String?
+  neighborhood String?
+  landmark     String?
+  city         String?
+  district     String?
+  county       String?
+  state        String?
+  province     String?
+  country      String?
+  countryCode  String?
+  postalCode   String?
+  zipCode      String?
+  poBoxNumber  String?
+  latitude     String?
+  longitude    String?
+  timezone     String?
+  geohash      String?
+  formatted    String?
+  placeId      String?
+  createdBy    Int?
+  updatedBy    Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdUser User?    @relation("AddressCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser User?    @relation("AddressUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  // Relations
+  vendors     Vendor[] @relation("VendorAddress")
+  units       Unit[]   @relation("UnitAddress")
+
+  @@map("addresses")
+}
+
+model ProductRequest {
+  id                        Int      @id @default(autoincrement())
+  uuid                      String   @unique @default(uuid())
+  InventoryProductDetailsId Int
+  Reason                    String
+  RequestStatus             String
+  approvalStatus            String   @default("Pending")
+  RequestBy                 Int
+  ewasteId                  Int?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  approverId                Int?
+
+  // Relations
+  createdUser             User                   @relation("ProductRequestCreatedBy", fields: [RequestBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  InventoryProductDetails InventoryProductDetail @relation("ProductRequestInventoryProductDetails", fields: [InventoryProductDetailsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver                User?                  @relation("ProductRequestApprovedBy", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ewaste                  EwasteRequestApprove?  @relation("ProductRequestEwaste", fields: [ewasteId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("product_request")
+}
+
+model Notification {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  userId          Int
+  text            String?
+  isRead          Boolean  @default(false)
+  transactionLink String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  createdUser User? @relation("NotificationUser", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("notifications")
+}
+
+model SoftWare {
+  id              Int       @id @default(autoincrement())
+  uuid            String    @unique @default(uuid())
+  name            String
+  version         String?
+  addedQuantity   Int
+  currentQuantity Int
+  licenseKey      String?
+  LicenseType     String?
+  IssueDate       DateTime?
+  ExpiryDate      DateTime?
+  activationKey   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       Int
+  updatedBy       Int
+
+  // Relations
+  createdUser         User?                @relation("SoftwareCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser         User?                @relation("SoftwareUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  softwareLogs        SoftWareLog[]
+  softwareAssignments SoftWareAssignment[] @relation("softwareDetails")
+
+  @@map("softwares")
+}
+
+model SoftWareAssignment {
+  id             Int      @id @default(autoincrement())
+  softwareId     Int
+  assignedTo     Int?
+  quantity       Int      @default(1)
+  status         String
+  assignedAt     DateTime @default(now())
+  assignedBy     Int
+  software       SoftWare @relation("softwareDetails", fields: [softwareId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedByUser User     @relation("SoftwareAssignedBy", fields: [assignedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedUser   User?    @relation("SoftwareAssignedTo", fields: [assignedTo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model SoftWareLog {
+  id            Int    @id @default(autoincrement())
+  uuid          String @unique @default(uuid())
+  softwareId    Int
+  action        String
+  userId        Int
+  // for mysql
+  // actionDetails String 
+  actionDetails String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  software SoftWare @relation(fields: [softwareId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user     User     @relation("SoftwareLogUser", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("software_logs")
+}
+
+model EwasteRequestApprove {
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique @default(uuid())
+  approveId      String
+  createdBy      Int
+  approvedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  signaturedFile String?
+  issuerId       Int
+  approverId     Int
+  reviewerId     Int
+
+  // Relations
+  createdByUser   User             @relation("EwasteApprovedCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issuer          User             @relation("EwasteApprovedIssuedBy", fields: [issuerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver        User             @relation("EwasteApprovedApprovedBy", fields: [approverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviewer        User             @relation("EwasteApprovedReviewedBy", fields: [reviewerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productRequests ProductRequest[] @relation("ProductRequestEwaste")
+
+  @@map("ewaste_request_approvals")
+}
+
+model MailConfig {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique @default(uuid())
+  action       String
+  subject      String?
+  unitId       Int
+  unitAdminId  Int
+  superAdminId Int
+  createdBy    Int
+  updatedBy    Int
+  status       Boolean  @default(true)
+  unit         Unit     @relation("MailConfigUnit", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  unitAdmin    User     @relation("MailConfigUnitAdmin", fields: [unitAdminId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  superAdmin   User     @relation("MailConfigSuperAdmin", fields: [superAdminId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUser  User     @relation("MailConfigCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedUser  User     @relation("MailConfigUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([action, unitId])
+  @@map("mail_configs")
+}
+
+model LoginStatus {
+  id             Int      @id @default(autoincrement())
+  loginId        String   @unique
+  loginDateTime  DateTime @default(now())
+  loginIPAddress String
+  loginBy        String
+  status         Boolean
+
+  @@map("login_status")
+}

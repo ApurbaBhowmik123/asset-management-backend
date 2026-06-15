@@ -1,0 +1,17 @@
+import { Router } from "express";
+import { hasPermission } from "@middlewares/permission.middleware";
+import { categoryRouter } from "./category.route";
+import { authCheck } from "@middlewares/auth.middleware";
+import { SubCategoryRouter } from "./subCategory.route";
+import { SpecFieldRouter } from "./specfield.route";
+import { productRouter } from "./product.route";
+import { installSofRouter } from "./installsof.route";
+import router from "./catalog.route";
+export const catalogRouter = Router();
+catalogRouter.use(authCheck);
+catalogRouter.use("/categories", categoryRouter);
+catalogRouter.use("/subcategories", SubCategoryRouter);
+catalogRouter.use("/specfields", SpecFieldRouter);
+catalogRouter.use("/products", productRouter);
+catalogRouter.use("/additional", router);
+catalogRouter.use("/installsof", installSofRouter);

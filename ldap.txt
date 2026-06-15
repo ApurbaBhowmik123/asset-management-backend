@@ -1,0 +1,45 @@
+public bool ActiveDirectoryAuthenticate(string username, string password)
+{
+     bool ret = false;
+ 
+     try
+     {
+         DirectoryEntry de = new DirectoryEntry("LDAP://" + "abgplanet.abg.com", username, password);
+         DirectorySearcher dsearch = new DirectorySearcher(de);
+         SearchResult results = null;
+ 
+         results = dsearch.FindOne();
+ 
+         ret = true;
+     }
+     catch
+     {
+         ret = false;
+     }
+ 
+     return ret;
+}
+protected void Login_Status(string username)
+{
+     try
+     {
+ 
+         // chk.inserterrorlog("ddvbhbhbbbvv");
+         tbl_SDB_LoginStatus ls = new tbl_SDB_LoginStatus();
+         ls.Login_ID = username;
+         ls.Login_DateTime = DateTime.Now;
+         ls.Login_IPAddress = getipaddress();
+         ls.Login_By = Path.GetFileNameWithoutExtension(Request.Path);
+ 
+ 
+         ls.Status = true;
+     }
+     catch (Exception ex)
+     {
+         message.Visible = true;
+         lblmessage.ForeColor = System.Drawing.Color.Red;
+         lblmessage.Text = "Something went wrong,Kindly contact our Marketing Representatives or write us at vedantalconnect@vedanta.co.in for any issue/ support / complaint";
+         string pageurl = Path.GetFileNameWithoutExtension(Request.Path);
+
+     }
+}

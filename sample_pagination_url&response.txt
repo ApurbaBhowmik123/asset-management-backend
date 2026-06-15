@@ -1,0 +1,48 @@
+Filter Url
+{{BASE_URL}}/super-admin/acl/permission?page=1&sortBy=name&sortOrder=asc&limit=5&search=create
+
+paginated response
+{
+    "status": true,
+    "message": "Permissions fetched successfully",
+    "data": {
+        "data": [
+            {
+                "id": 7,
+                "name": "Create Permissions",
+                "description": "Ability to create new permissions",
+                "slug": "create-permissions",
+                "createdAt": "2025-07-22T07:50:24.319Z",
+                "updatedAt": "2025-07-22T07:50:24.319Z"
+            },
+            {
+                "id": 3,
+                "name": "Create Roles",
+                "description": "Ability to create new roles",
+                "slug": "create-roles",
+                "createdAt": "2025-07-22T07:50:24.319Z",
+                "updatedAt": "2025-07-22T07:50:24.319Z"
+            },
+            {
+                "id": 19,
+                "name": "create test",
+                "description": "create test",
+                "slug": "create-test",
+                "createdAt": "2025-07-22T09:45:52.181Z",
+                "updatedAt": "2025-07-22T09:45:52.181Z"
+            },
+            {
+                "id": 5,
+                "name": "Create Users",
+                "description": "Ability to create new users",
+                "slug": "create-users",
+                "createdAt": "2025-07-22T07:50:24.318Z",
+                "updatedAt": "2025-07-22T07:50:24.318Z"
+            }
+        ],
+        "page": 1,
+        "limit": 5,
+        "total": 4,
+        "totalPages": 1
+    }
+}

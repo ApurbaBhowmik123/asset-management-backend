@@ -1,0 +1,36 @@
+using System;
+using System.DirectoryServices;
+
+public class HelloWorld
+{
+    public static bool ActiveDirectoryAuthenticate(string username, string password)
+    {
+        bool ret = false;
+
+        try
+        {
+            using (DirectoryEntry de = new DirectoryEntry("LDAP://abgplanet.abg.com", username, password))
+            {
+                using (DirectorySearcher dsearch = new DirectorySearcher(de))
+                {
+                    SearchResult results = dsearch.FindOne();
+                    if (results != null)
+                        ret = true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Authentication failed: " + ex.Message);
+            ret = false;
+        }
+
+        return ret;
+    }
+
+    public static void Main(string[] args)
+    {
+        bool result = ActiveDirectoryAuthenticate("oneithelpdesk.emil@adityabirla.com", "EssEl@2025");
+        Console.WriteLine("Authentication result: " + result);
+    }
+}

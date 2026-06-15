@@ -1,0 +1,10 @@
+dist
+node_modules
+.env
+/src/generated/prisma
+/prisma/generated
+package-lock.json
+/uploads/*/*
+/public
+/src/generated_old/prisma
+/prisma/generated_old

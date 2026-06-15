@@ -1,0 +1,10 @@
+import Router from "express";
+import { hasPermission } from "../../../middleware/permission.middleware";
+import { permissionRoute } from "./permission.route";
+import { roleRoute } from "./role.route";
+import { userRoute } from "./user.route";
+export const ACLRoute = Router();
+ACLRoute.use(hasPermission("access-module"));
+ACLRoute.use("/permission", permissionRoute);
+ACLRoute.use("/role", roleRoute);
+ACLRoute.use("/user", userRoute);
