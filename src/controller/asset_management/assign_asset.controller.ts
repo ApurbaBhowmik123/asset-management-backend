@@ -375,6 +375,55 @@ export const getAssignList = async (
               contains: search,
             },
           },
+          {
+            assignedToUser: {
+              name: {
+                contains: search,
+              },
+            },
+          },
+          {
+            assignedToUser: {
+              unit: {
+                name: {
+                  contains: search,
+                },
+              },
+            },
+          },
+          {
+            assignedToLocation: {
+              name: {
+                contains: search,
+              },
+            },
+          },
+          {
+            inventoryProductDetail: {
+              specValues: {
+                some: {
+                  value: {
+                    contains: search,
+                  },
+                },
+              },
+            },
+          },
+          {
+            inventoryProductDetail: {
+              grInventoryProduct: {
+                product: {
+                  productSpecValue: {
+                    some: {
+                      value: {
+                        contains: search,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         ],
       }
       : {};
@@ -463,6 +512,24 @@ export const getAssignList = async (
                           name: true,
                         },
                       },
+                      productSpecValue: {
+                        select: {
+                          value: true,
+                          specField: {
+                            select: { name: true }
+                          }
+                        }
+                      },
+                    },
+                  },
+                },
+              },
+              specValues: {
+                select: {
+                  value: true,
+                  specField: {
+                    select: {
+                      name: true,
                     },
                   },
                 },
@@ -632,7 +699,12 @@ export const getAssignDetails = async (
                   include: {
                     brand: true,
                     category: true,
-                                      },
+                    productSpecValue: {
+                      include: {
+                        specField: true,
+                      },
+                    },
+                  },
                 },
                 grDetails: {
                   include: {
@@ -649,6 +721,11 @@ export const getAssignDetails = async (
               include: {
                 softwares: true,
                 createdUser: { select: { id: true, name: true } },
+              },
+            },
+            specValues: {
+              include: {
+                specField: true,
               },
             },
           },
@@ -721,6 +798,7 @@ export const getAssignDetails = async (
           qrCode: assignment.inventoryProductDetail.qrCode?.qrCodeUrl,
           grDetails: grProduct.grDetails,
           softwareInstalls: assignment.inventoryProductDetail.softwareInstalls,
+          specValues: assignment.inventoryProductDetail.specValues?.length ? assignment.inventoryProductDetail.specValues : grProduct.product.productSpecValue,
         };
       }),
     };
