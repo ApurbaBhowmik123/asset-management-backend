@@ -9,6 +9,7 @@ import {
   deleteGr,
   tagGr,
   getGrSummary,
+  tagItem,
 } from "@controllers/gr/gr.controller";
 import { hasPermission } from "@middlewares/permission.middleware";
 import {
@@ -77,4 +78,11 @@ grRouter.put(
   validateAddSapCode,
   validate,
   addSapCode
+);
+
+grRouter.post(
+  "/tag-item",
+  hasPermission("update-gr"),
+  validate,
+  tagItem
 );

@@ -507,7 +507,7 @@ export const updateGrInventory = async (
       ...(existingInventory.product
         ? [
           prisma.product.update({
-            where: { id: existingInventory.productId },
+            where: { id: Number(existingInventory.productId) },
             data: {
               ...(brandId && {
                 brand: {

@@ -42,68 +42,27 @@ export const createGr = async (
 
     const userId = parseInt(req.user?.id ?? "0");
 
-    // Validate quantity against MSQ
-    for (const prod of products) {
-      const dbProduct = await prisma.product.findUnique({
-        where: { id: Number(prod.productId) },
-        select: { name: true, msq: true },
-      });
-      if (!dbProduct) {
-        return next(new ErrorHandler(`Product with ID ${prod.productId} not found`, 404));
-      }
-      if (dbProduct.msq) {
-        const msqVal = parseInt(dbProduct.msq);
-        if (!isNaN(msqVal) && Number(prod.quantity) > msqVal) {
-          return next(
-            new ErrorHandler(
-              `Quantity for product "${dbProduct.name}" (${prod.quantity}) cannot exceed its Minimum Stock Quantity limit of ${msqVal}`,
-              400
-            )
-          );
-        }
-      }
-    }
     const uuid = await generateNextCode(prisma.gRDetail, "uuid", "GR-");
     const location = await prisma.location.findFirst({
-      where: {
-        id: Number(locationId),
-      },
-      select: {
-        id: true,
-        abbriviatedName: true,
-        name: true,
-      },
+      where: { id: Number(locationId) },
+      select: { id: true, abbriviatedName: true, name: true },
     });
-    const locationAbbr =
-      location?.abbriviatedName ??
-      location?.name.slice(0, 3).toUpperCase() ??
-      "N/A";
+    const locationAbbr = location?.abbriviatedName ?? location?.name.slice(0, 3).toUpperCase() ?? "N/A";
+    
     const unit = await prisma.unit.findFirst({
-      where: {
-        id: Number(unitId),
-      },
-      select: {
-        id: true,
-        abbriviatedName: true,
-        name: true,
-        identificationNumber: true,
-      },
+      where: { id: Number(unitId) },
+      select: { id: true, abbriviatedName: true, name: true, identificationNumber: true },
     });
-    const unitAbbr =
-      unit?.abbriviatedName ?? unit?.name.slice(0, 3).toUpperCase() ?? "N/A";
+    const unitAbbr = unit?.abbriviatedName ?? unit?.name.slice(0, 3).toUpperCase() ?? "N/A";
 
     const invoiceFile =
       req.files && !Array.isArray(req.files) && "invoiceFile" in req.files
         ? (req.files["invoiceFile"] as Express.Multer.File[])
         : [];
 
-    const [invoiceFilename] = invoiceFile
-      ? await uploadFiles("invoiceFile", invoiceFile)
-      : [null];
-    console.log("invoiceFilename", invoiceFilename);
-    const invoiceFileUrl = invoiceFilename
-      ? `${process.env.APP_URL}${invoiceFilename}`
-      : null;
+    const [invoiceFilename] = invoiceFile ? await uploadFiles("invoiceFile", invoiceFile) : [null];
+    const invoiceFileUrl = invoiceFilename ? `${process.env.APP_URL}${invoiceFilename}` : null;
+
     const grDetail = await prisma.gRDetail.create({
       data: {
         uuid,
@@ -121,272 +80,74 @@ export const createGr = async (
       },
     });
 
-    const warrantyFiles =
-      req.files && !Array.isArray(req.files) && "warrantyFiles" in req.files
-        ? (req.files["warrantyFiles"] as Express.Multer.File[])
-        : [];
-
-    console.log("warrentyFiles", warrantyFiles);
-
     const invoiceFiles =
       req.files && !Array.isArray(req.files) && "invoiceFiles" in req.files
         ? (req.files["invoiceFiles"] as Express.Multer.File[])
         : [];
-    console.log("invoiceFiles", invoiceFiles);
 
     for (let i = 0; i < products.length; i++) {
       const product = products[i];
-
-      const currentWarrantyFile = warrantyFiles[i];
       const currentInvoiceFile = invoiceFiles[i];
 
-      const [warrantyFilename] = currentWarrantyFile
-        ? await uploadFiles("warrantyFiles", currentWarrantyFile)
-        : [null];
-
-      const [invoiceFilename] = currentInvoiceFile
+      const [itemInvoiceFilename] = currentInvoiceFile
         ? await uploadFiles("invoiceFiles", currentInvoiceFile)
         : [null];
-      const subcategoryId = product.subcategoryId ? Number(product.subcategoryId) : null;
+
       let specAbbr = "N/A";
-      if (subcategoryId) {
-        const subcategory = await prisma.subcategory.findFirst({
-          where: { id: subcategoryId },
-          select: {
-            id: true,
-            abbriviatedName: true,
-            name: true,
-          },
-        });
-        specAbbr =
-          subcategory?.abbriviatedName ??
-          subcategory?.name.slice(0, 3).toUpperCase() ??
-          "N/A";
-      } else {
-        const dbProductForCat = await prisma.product.findUnique({
-          where: { id: Number(product.productId) },
-          select: {
-            category: true,
-          }
-        });
-        const category = dbProductForCat?.category;
-        specAbbr =
-          category?.abbriviatedName ??
-          category?.name.slice(0, 3).toUpperCase() ??
-          "N/A";
-      }
+      let trackingType = "Trackable";
+      const category = await prisma.category.findUnique({
+        where: { id: Number(product.categoryId) },
+        select: { abbriviatedName: true, name: true, trackingType: true },
+      });
+      specAbbr = category?.abbriviatedName ?? category?.name.slice(0, 3).toUpperCase() ?? "N/A";
+      trackingType = category?.trackingType ?? "Trackable";
 
       const grInventoryProduct = await prisma.gRInventoryProduct.create({
         data: {
           grDetailsId: grDetail.id,
-          productId: Number(product.productId),
-          quantity: product.quantity,
-          ratePerPiece: product.ratePerPiece,
-          freeQty: product.freeQty || 0,
-          description: product.description,
-          maintenanceFrequency: product.maintenanceFrequency,
-          maintenanceDueDate: product.maintenanceDueDate
-            ? new Date(product.maintenanceDueDate)
-            : null,
-          lifecycleExDate: product.lifecycleExDate
-            ? new Date(product.lifecycleExDate)
-            : null,
-          warrantyTill: product.warrantyTill
-            ? new Date(product.warrantyTill)
-            : null,
-          warrantyFile: warrantyFilename ? `${process.env.APP_URL}${warrantyFilename}` : null,
-          totalAmount: product.ratePerPiece * product.quantity,
-          importantLink: product.importantLink,
-          invoiceFile: invoiceFilename ? `${process.env.APP_URL}${invoiceFilename}` : null,
+          categoryId: Number(product.categoryId),
+          brandId: product.brandId ? Number(product.brandId) : null,
+          quantity: Number(product.quantity),
+          ratePerPiece: Number(product.ratePerPiece),
+          freeQty: 0,
+          grossAmount: product.grossAmount ? Number(product.grossAmount) : null,
+          taxPercent: product.taxPercent ? Number(product.taxPercent) : 18,
+          taxAmount: product.taxAmount ? Number(product.taxAmount) : null,
+          netAmount: product.netAmount ? Number(product.netAmount) : (Number(product.ratePerPiece) * Number(product.quantity)),
+          totalAmount: product.netAmount ? Number(product.netAmount) : (Number(product.ratePerPiece) * Number(product.quantity)),
+          invoiceFile: itemInvoiceFilename ? `${process.env.APP_URL}${itemInvoiceFilename}` : null,
+          description: product.description ? product.description : null,
           createdBy: userId,
           updatedBy: userId,
         },
       });
 
-      const allSerials = [
-        ...(product.serials || []),
-        ...(product.freeSerials || []).map((s: any) => ({
-          ...s,
-          isFree: true,
-        })),
-      ];
-
-      for (const serial of allSerials) {
+      const quantityToCreate = Number(product.quantity);
+      for (let j = 0; j < quantityToCreate; j++) {
         const AssetId = await generateNextCode(
           prisma.inventoryProductDetail,
           "uuid",
           `${locationAbbr}-${specAbbr}-`,
           4
         );
-        const grDetails = await prisma.inventoryProductDetail.create({
+        await prisma.inventoryProductDetail.create({
           data: {
             grInventoryProductId: grInventoryProduct.id,
             uuid: AssetId,
-            serialNo1: serial.serialNo1,
-            maintenanceDueDate: product.maintenanceDueDate
-              ? new Date(product.maintenanceDueDate)
-              : null,
-            lifecycleExDate: product.lifecycleExDate
-              ? new Date(product.lifecycleExDate)
-              : null,
-            serialNo2: serial.serialNo2,
-            locationId: locationId ? Number(locationId) : null,
             unitId: Number(unitId),
-            isFree: serial.isFree || false,
-            assignedStatus: "Untagged",
+            locationId: Number(locationId),
+            assignedStatus: trackingType.toUpperCase() === "NON_TRACKABLE" || trackingType === "Non-Trackable" ? "InStock" : "Untagged",
             createdBy: userId,
             updatedBy: userId,
           },
         });
-        await prisma.logReport.create({
-          data: {
-            transactionDate: grDetail.createdAt,
-            productId: grDetails.id,
-            transactionType: "GR CREATED",
-            transactionlink: `${process.env.FRONTEND_URL}/grentry/listgr/viewgr/${grDetail.uuid}`,
-            logReportDetails: `GR Created for Product: ${grDetails.uuid}`,
-            createdBy: userId,
-            transactionId: grDetail.uuid,
-            productStatus: "Product Added to Inventory",
-            cost: grInventoryProduct.ratePerPiece,
-          },
-        });
-        for (const spec of product.specs || []) {
-          // Skip free-form attributes that have no valid specFieldId
-          const sfId = spec.specFieldId ? parseInt(String(spec.specFieldId)) : NaN;
-          if (isNaN(sfId)) continue;
-          await prisma.gRProductSpecValue.create({
-            data: {
-              grInventoryProductDetailId: grDetails.id,
-              specFieldId: sfId,
-              value: spec.value,
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
-        }
-        const qrDetails = await prisma.gRDetail.findUnique({
-          where: { id: grDetail.id },
-          select: {
-            uuid: true,
-            sapId: true,
-            sapDate: true,
-            grId: true,
-            grDate: true,
-            invoiceDate: true,
-            inventoryProducts: {
-              select: {
-                quantity: true,
-                ratePerPiece: true,
-                freeQty: true,
-                totalAmount: true,
-                inventoryDetails: {
-                  select: {
-                    uuid: true,
-                    serialNo1: true,
-                    location: {
-                      select: {
-                        name: true,
-                      },
-                    },
-                  },
-                },
-                product: {
-                  select: {
-                    name: true,
-                    
-                  },
-                },
-              },
-            },
-          },
-        });
-        if (unit) {
-          const qrUrl = await jsongenerateQRCode({
-            inventoryProductDetailId: grDetails.uuid,
-            grId: grDetail.uuid,
-            serialNo1: grDetails.serialNo1 ?? "SN-101",
-            qrDetails: qrDetails,
-            unitName: unit ? unit.name : "kolkata",
-            identificationNumber: unit.identificationNumber ?? "001",
-            locationName: qrDetails
-              ? qrDetails.inventoryProducts?.[0]?.inventoryDetails?.[0]
-                ?.location?.name || ""
-              : "",
-          });
-
-          await prisma.inventoryProductQr.create({
-            data: {
-              inventoryProductDetailId: grDetails.id,
-              qrCodeUrl: qrUrl,
-            },
-          });
-        }
       }
     }
-    const grDetails = await prisma.gRDetail.findUnique({
-      where: { id: grDetail.id },
-      select: {
-        uuid: true,
-        sapId: true,
-        sapDate: true,
-        grId: true,
-        grDate: true,
-        invoiceDate: true,
-        inventoryProducts: {
-          select: {
-            quantity: true,
-            ratePerPiece: true,
-            freeQty: true,
-            totalAmount: true,
-            product: {
-              select: {
-                name: true,
-                
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!grDetails) {
-      return next(new ErrorHandler("Failed to create Gr", 404));
-    }
 
-    const emailList = await foundSuperAdminUnitAdmin(Number(unitId));
-
-    await sendGrEmail(
-      emailList,
-      grDetails.uuid,
-      invoiceNumber,
-      grDetails?.invoiceDate ? formatDate(grDetails.invoiceDate) : "",
-      grDetails?.grDate ? formatDate(grDetails.grDate) : "",
-      grDetails?.grId ?? uuid,
-      grDetails?.sapId ?? "SAP-",
-      grDetails.inventoryProducts,
-      next
-    );
-    const log = await prisma.log.create({
-      data: {
-        action: LogAction.GR_CREATE,
-        userId: userId,
-        relatedModelType: "prisma.gRDetail",
-        relatedModelId: grDetail.id,
-      },
-    });
-    await prisma.logReport.updateMany({
-      where: {
-        transactionId: grDetail.uuid,
-        transactionType: "GR CREATED",
-      },
-      data: {
-        logId: log.id,
-      },
-    });
-    return successResponse(res, 201, "GR Created Successfully", grDetail, null);
-  } catch (error: unknown) {
-    console.error(error);
-    return next(new ErrorHandler("Internal Server Error", 500));
+    return successResponse(res, 201, "GR created successfully", grDetail, null);
+  } catch (error: any) {
+    console.log("error", error);
+    next(new ErrorHandler(error.message, 500));
   }
 };
 
@@ -446,7 +207,7 @@ export const getGr = async (
       baseWhere.inventoryProducts = { some: {} };
       
       if (brandId) {
-        baseWhere.inventoryProducts.some.product = { brandId: brandId };
+        baseWhere.inventoryProducts.some.brandId = brandId;
       }
 
       if (locationId || unitFilter) {
@@ -545,9 +306,10 @@ export const getGrById = async (
             product: {
               include: {
                 category: true,
-                              },
+              },
             },
-
+            category: true,
+            brand: true,
             inventoryDetails: {
               where: {
                 status: true,
@@ -556,7 +318,6 @@ export const getGrById = async (
                 qrCode: true,
                 unit: true,
                 location: true,
-
                 specValues: {
                   include: {
                     specField: true,
@@ -908,7 +669,7 @@ export const getGrSummary = async (
 
     if (locationId || brandId || unitFilter) {
       baseWhere.inventoryProducts = { some: {} };
-      if (brandId) baseWhere.inventoryProducts.some.product = { brandId };
+      if (brandId) baseWhere.inventoryProducts.some.brandId = brandId;
       if (locationId || unitFilter) {
         baseWhere.inventoryProducts.some.inventoryDetails = { some: {} };
         if (locationId) baseWhere.inventoryProducts.some.inventoryDetails.some.locationId = locationId;
@@ -916,19 +677,16 @@ export const getGrSummary = async (
       }
     }
 
-    // Fetch the actual GRs with their products
     const grData = await prisma.gRDetail.findMany({
       where: baseWhere,
       select: {
         inventoryProducts: {
           select: {
             quantity: true,
-            product: {
-              select: {
-                name: true,
-                brand: { select: { name: true } }
-              }
-            }
+            description: true,
+            category: { select: { name: true } },
+            brand: { select: { name: true } },
+            product: { select: { name: true, brand: { select: { name: true } } } }
           }
         }
       }
@@ -938,10 +696,9 @@ export const getGrSummary = async (
 
     for (const gr of grData) {
       for (const invProd of gr.inventoryProducts) {
-        const prod = invProd.product;
-        if (!prod) continue;
-        const brandName = prod.brand?.name ?? "Unknown Brand";
-        const productName = prod.name ?? "Unknown Product";
+        // Support both new (category/brand on invProd directly) and old (via product) schema
+        const brandName = invProd.brand?.name ?? invProd.product?.brand?.name ?? "Unknown Brand";
+        const productName = invProd.category?.name ?? invProd.product?.name ?? "Unknown Category";
         const key = `${brandName} - ${productName}`;
 
         const existing = summaryMap.get(key);
@@ -964,3 +721,96 @@ export const getGrSummary = async (
     return next(new ErrorHandler(error.message, 500));
   }
 };
+
+
+
+export const tagItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {
+      inventoryProductDetailId,
+      serialNo1,
+      sapCode,
+      modelName,
+      warrantyTill,
+      specValues
+    } = req.body;
+    
+    const userId = parseInt(req.user?.id ?? "0");
+
+    const inventoryDetail = await prisma.inventoryProductDetail.findUnique({
+      where: { id: Number(inventoryProductDetailId) },
+      include: {
+        grInventoryProduct: true,
+      }
+    });
+
+    if (!inventoryDetail) {
+      return next(new ErrorHandler("Inventory Item not found", 404));
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.inventoryProductDetail.update({
+        where: { id: inventoryDetail.id },
+        data: {
+          serialNo1: serialNo1 ?? null,
+          sapCode: sapCode ?? null,
+          modelName: modelName ?? null,
+          assignedStatus: "InStock",
+          updatedBy: userId,
+        }
+      });
+
+      if (warrantyTill) {
+        await tx.gRInventoryProduct.update({
+          where: { id: inventoryDetail.grInventoryProductId },
+          data: {
+            warrantyTill: new Date(warrantyTill)
+          }
+        });
+      }
+
+      if (specValues && Array.isArray(specValues)) {
+        for (const spec of specValues) {
+          await tx.gRProductSpecValue.create({
+            data: {
+              grInventoryProductDetailId: inventoryDetail.id,
+              specFieldId: Number(spec.specFieldId),
+              value: spec.value,
+              createdBy: userId,
+              updatedBy: userId,
+            }
+          });
+        }
+      }
+
+      // Check if all items in this GR are tagged
+      const grDetailsId = inventoryDetail.grInventoryProduct?.grDetailsId;
+      if (grDetailsId) {
+        const untaggedCount = await tx.inventoryProductDetail.count({
+          where: {
+            grInventoryProduct: {
+              grDetailsId: grDetailsId,
+            },
+            assignedStatus: "Untagged",
+          }
+        });
+        
+        if (untaggedCount === 0) {
+          await tx.gRDetail.update({
+            where: { id: grDetailsId },
+            data: { isTagged: true }
+          });
+        }
+      }
+    });
+
+    return successResponse(res, 200, "Item tagged successfully", null, null);
+  } catch (error: any) {
+    next(new ErrorHandler(error.message, 500));
+  }
+};
+

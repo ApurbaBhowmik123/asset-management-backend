@@ -291,6 +291,7 @@ model Brand {
   createdUser User?     @relation("BrandCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   updatedUser User?     @relation("BrandUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   products    Product[]
+  inventoryEntries GRInventoryProduct[] @relation("BrandToInventoryProducts")
 
   @@map("brands")
 }
@@ -316,6 +317,7 @@ model Category {
   subcategories      Subcategory[]
   products           Product[]
   categorySpecFields CategorySpecField[]
+  inventoryEntries   GRInventoryProduct[] @relation("CategoryToInventoryProducts")
 
   @@map("categories")
 }
@@ -494,7 +496,9 @@ model GRInventoryProduct {
   id                   Int       @id @default(autoincrement())
   uuid                 String    @unique @default(uuid())
   grDetailsId          Int
-  productId            Int
+  productId            Int?
+  categoryId           Int?
+  brandId              Int?
   quantity             Int
   ratePerPiece         Float
   freeQty              Int
@@ -505,6 +509,10 @@ model GRInventoryProduct {
   warrantyTill         DateTime?
   warrantyFile         String?
   totalAmount          Float
+  grossAmount          Float?
+  taxPercent           Float?    @default(18)
+  taxAmount            Float?
+  netAmount            Float?
   importantLink        String?
   invoiceFile          String?
   status               Boolean   @default(true)
@@ -515,7 +523,9 @@ model GRInventoryProduct {
   updatedAt            DateTime  @updatedAt
 
   grDetails        GRDetail                 @relation("GRDetailToInventoryProducts", fields: [grDetailsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  product          Product                  @relation("ProductToInventoryProducts", fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product          Product?                 @relation("ProductToInventoryProducts", fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category         Category?                @relation("CategoryToInventoryProducts", fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  brand            Brand?                   @relation("BrandToInventoryProducts", fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdUser      User                     @relation("GRInventoryProductCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   updatedUser      User                     @relation("GRInventoryProductUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   inventoryDetails InventoryProductDetail[] @relation("InventoryProductDetailToGRInventoryProduct")
@@ -550,6 +560,7 @@ model InventoryProductDetail {
   serialNo1              String?
   serialNo2              String?
   sapCode                String?
+    modelName              String?
   isFree                 Boolean   @default(false)
   assignedStatus         String    @default("InStock")
   previousAssignedStatus String?

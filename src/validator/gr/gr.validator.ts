@@ -23,9 +23,13 @@ export const validateCreateGr = [
 
   // Validate products array
   body("products").isArray().withMessage("products must be an array"),
-  body("products.*.productId")
+  body("products.*.categoryId")
     .isInt()
-    .withMessage("productId must be an integer"),
+    .withMessage("categoryId must be an integer"),
+  body("products.*.brandId")
+    .optional({ nullable: true })
+    .isInt()
+    .withMessage("brandId must be an integer"),
   body("products.*.quantity")
     .isInt({ min: 1 })
     .withMessage("quantity must be a positive integer"),

@@ -401,6 +401,8 @@ export const fetchAssignDetails = async (
                     category: true,
                                       },
                 },
+                brand: true,
+                category: true,
                 grDetails: {
                   include: {
                     vendor: true,
@@ -472,12 +474,12 @@ export const fetchAssignDetails = async (
             const grProduct =
               assignment.inventoryProductDetail.grInventoryProduct;
             return {
-              id: grProduct.product.id,
+              id: grProduct.product?.id ?? grProduct.categoryId,
               inventorProductId: assignment.inventoryProductDetail.id,
               AssetID: assignment.inventoryProductDetail.uuid,
-              name: grProduct.product.name,
-              brand: grProduct.product.brand,
-              category: grProduct.product.category,
+              name: grProduct.product?.name ?? grProduct.category?.name ?? "Unknown",
+              brand: grProduct.product?.brand ?? grProduct.brand ?? null,
+              category: grProduct.product?.category ?? grProduct.category ?? null,
               
               serialNo1: assignment.inventoryProductDetail.serialNo1,
               serialNo2: assignment.inventoryProductDetail.serialNo2,
@@ -547,6 +549,8 @@ export const fetchAssignDetailsSingle = async (
                     category: true,
                                       },
                 },
+                brand: true,
+                category: true,
                 grDetails: {
                   include: {
                     vendor: true,
