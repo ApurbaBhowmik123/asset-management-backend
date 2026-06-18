@@ -10,6 +10,7 @@ import {
   tagGr,
   getGrSummary,
   tagItem,
+  bulkTagItem,
 } from "@controllers/gr/gr.controller";
 import { hasPermission } from "@middlewares/permission.middleware";
 import {
@@ -85,4 +86,11 @@ grRouter.post(
   hasPermission("update-gr"),
   validate,
   tagItem
+);
+
+grRouter.post(
+  "/bulk-tag-item",
+  hasPermission("update-gr"),
+  validate,
+  bulkTagItem
 );

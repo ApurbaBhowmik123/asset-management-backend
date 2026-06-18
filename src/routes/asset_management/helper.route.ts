@@ -5,6 +5,8 @@ import {
   fetchAssignableProducList,
   fetchAssignDetails,
   fetchAssignDetailsSingle,
+  getSpecValuesByCategory,
+  getFilterMatrix,
 } from "@src/controller/asset_management/helper.controller";
 const assethelprouter = Router();
 
@@ -28,5 +30,17 @@ assethelprouter.get(
   hasPermission("update-asset"),
   fetchAssignDetailsSingle
 );
+assethelprouter.get(
+  "/spec-values/:categoryId",
+  hasPermission("update-asset"),
+  getSpecValuesByCategory
+);
+assethelprouter.get(
+  "/dynamic-filters-master-data",
+  hasPermission("update-asset"),
+  getFilterMatrix
+);
+
+assethelprouter.get("/test-matrix-data", getFilterMatrix);
 
 export default assethelprouter;

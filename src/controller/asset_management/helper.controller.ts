@@ -139,29 +139,89 @@ export const fetchAssignableProducList = async (
     if (search) {
       whereClause.OR = [
         { uuid: { contains: search } },
-        // { serialNo1: { contains: search } },
-        // { serialNo2: { contains: search } },
+        { modelName: { contains: search } },
         { assignedStatus: { equals: search as any } },
         {
           grInventoryProduct: {
-            product: {
-              OR: [
-                { name: { contains: search } },
-                {
-                  category: {
-                    name: { contains: search },
-                  },
+            OR: [
+              {
+                product: {
+                  name: { contains: search },
                 },
-                {
-                  subcategory: {
-                    name: { contains: search },
-                  },
+              },
+              {
+                category: {
+                  name: { contains: search },
                 },
-              ],
-            },
+              },
+              {
+                brand: {
+                  name: { contains: search },
+                },
+              },
+            ]
           },
         },
       ];
+    }
+
+    const brandId = parseInt(req.query.brandId as string);
+    const categoryId = parseInt(req.query.categoryId as string);
+    const productId = parseInt(req.query.productId as string);
+    const specsStr = req.query.specs as string;
+    const modelName = req.query.modelName as string;
+
+    if (modelName && modelName.trim() !== "") {
+      whereClause.modelName = modelName.trim();
+    }
+
+    if (!isNaN(brandId)) {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        grInventoryProduct: {
+          OR: [
+            { brandId: brandId },
+            { product: { brandId: brandId } }
+          ]
+        }
+      });
+    }
+    if (!isNaN(categoryId)) {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        grInventoryProduct: {
+          OR: [
+            { categoryId: categoryId },
+            { product: { categoryId: categoryId } }
+          ]
+        }
+      });
+    }
+    if (!isNaN(productId)) {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        grInventoryProduct: { productId: productId }
+      });
+    }
+    if (specsStr) {
+      try {
+        const specs = JSON.parse(specsStr);
+        whereClause.AND = whereClause.AND || [];
+        for (const [key, value] of Object.entries(specs)) {
+          if (value && String(value).trim() !== "") {
+            whereClause.AND.push({
+              specValues: {
+                some: {
+                  specFieldId: Number(key),
+                  value: { contains: String(value) }
+                }
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse specs", e);
+      }
     }
 
     let assignableProductList;
@@ -219,9 +279,18 @@ export const fetchAssignableProducList = async (
         updatedAt: true,
         isUsed: true,
         status: true,
+        specValues: {
+          include: {
+            specField: true
+          }
+        },
         grInventoryProduct: {
           select: {
             id: true,
+            categoryId: true,
+            brandId: true,
+            category: { select: { id: true, name: true } },
+            brand: { select: { id: true, name: true } },
             grDetails: {
               select: {
                 id: true,
@@ -232,7 +301,8 @@ export const fetchAssignableProducList = async (
               select: {
                 id: true,
                 name: true,
-                category: { select: { id: true, name: true } }
+                category: { select: { id: true, name: true } },
+                brand: { select: { id: true, name: true } },
               },
             },
           },
@@ -661,5 +731,125 @@ export const fetchAssignDetailsSingle = async (
         ? new ErrorHandler(error.message, 500)
         : new ErrorHandler("An unexpected error occurred", 500)
     );
+  }
+};
+
+export const getSpecValuesByCategory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const categoryId = parseInt(req.params.categoryId as string);
+    if (isNaN(categoryId)) {
+      return next(new ErrorHandler("Invalid category ID", 400));
+    }
+
+    const specFields = await prisma.categorySpecField.findMany({
+      where: { categoryId },
+    });
+
+    const optionsMap: Record<number, string[]> = {};
+    for (const sf of specFields) {
+      const distinctValues = await prisma.gRProductSpecValue.findMany({
+        where: { specFieldId: sf.specFieldId, status: true },
+        distinct: ['value'],
+        select: { value: true }
+      });
+      optionsMap[sf.specFieldId] = distinctValues.map(v => v.value).filter(v => v && v.trim() !== "");
+    }
+
+    return successResponse(res, 200, "Spec values retrieved successfully", optionsMap, null);
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal server error", 500));
+  }
+};
+
+
+export const getFilterMatrix = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = parseInt(req.user?.id ?? "0");
+    const user = await prisma.user.findUnique({
+      where: { id: userId, status: true },
+      include: { roles: true },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler("User not found", 404));
+    }
+
+    const isSuperAdmin = user.roles.some((role: any) => role.name === "Super Admin");
+
+    const baseWhere: any = {
+      status: true,
+      assignedStatus: {
+        notIn: ["ASSIGNED", "BLOCKED", "WRITE_OFF", "E_WASTE"],
+      },
+    };
+
+    if (!isSuperAdmin) {
+      baseWhere.unitId = Number(user.unitId);
+    }
+
+    const items = await prisma.inventoryProductDetail.findMany({
+      where: baseWhere,
+      select: {
+        modelName: true,
+        specValues: {
+          select: {
+            specFieldId: true,
+            value: true,
+          }
+        },
+        grInventoryProduct: {
+          select: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                category: { select: { id: true, name: true } },
+                brand: { select: { id: true, name: true } }
+              }
+            },
+            categoryId: true,
+            brandId: true,
+            category: { select: { id: true, name: true } },
+            brand: { select: { id: true, name: true } }
+          }
+        }
+      }
+    });
+
+    const matrix = items.map(item => {
+      const prod = item.grInventoryProduct?.product;
+      const cat = prod?.category || item.grInventoryProduct?.category;
+      const brd = prod?.brand || item.grInventoryProduct?.brand;
+
+      const specs: Record<number, string> = {};
+      item.specValues?.forEach((sv: any) => {
+        if (sv.value) specs[sv.specFieldId] = sv.value.trim();
+      });
+
+      return {
+        categoryId: cat?.id || null,
+        categoryName: cat?.name || "Unknown",
+        brandId: brd?.id || null,
+        brandName: brd?.name || "Unknown",
+        productId: prod?.id || null,
+        productName: prod?.name || "Unknown",
+        modelName: item.modelName || "N/A",
+        specs
+      };
+    });
+
+    console.log(`[getFilterMatrix] Found ${items.length} items. Mapping ${matrix.length} to matrix.`);
+
+    return res.status(200).json({ status: true, data: matrix, message: "Matrix generated" });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal server error", 500));
   }
 };

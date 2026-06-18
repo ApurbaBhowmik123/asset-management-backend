@@ -130,17 +130,30 @@ export const createGr = async (
           `${locationAbbr}-${specAbbr}-`,
           4
         );
-        await prisma.inventoryProductDetail.create({
-          data: {
-            grInventoryProductId: grInventoryProduct.id,
-            uuid: AssetId,
-            unitId: Number(unitId),
-            locationId: Number(locationId),
-            assignedStatus: trackingType.toUpperCase() === "NON_TRACKABLE" || trackingType === "Non-Trackable" ? "InStock" : "Untagged",
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
+          const createdDetail = await prisma.inventoryProductDetail.create({
+            data: {
+              grInventoryProductId: grInventoryProduct.id,
+              uuid: AssetId,
+              unitId: Number(unitId),
+              locationId: Number(locationId),
+              assignedStatus: trackingType.toUpperCase() === "NON_TRACKABLE" || trackingType === "Non-Trackable" ? "InStock" : "Untagged",
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+
+          // Generate QR code
+          const qrCodeUrl = await generateQRCode({
+            inventoryProductDetailId: createdDetail.uuid,
+            grId: String(grDetail.id),
+          });
+
+          await prisma.inventoryProductQr.create({
+            data: {
+              inventoryProductDetailId: createdDetail.id,
+              qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""), // Store relative path
+            }
+          });
       }
     }
 
@@ -723,6 +736,128 @@ export const getGrSummary = async (
 };
 
 
+
+export const bulkTagItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { items } = req.body;
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return next(new ErrorHandler("Items array is required", 400));
+    }
+
+    const userId = parseInt(req.user?.id ?? "0");
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const {
+          inventoryProductDetailId,
+          serialNo1,
+          sapCode,
+          modelName,
+          warrantyTill,
+          specValues
+        } = item;
+
+        const inventoryDetail = await tx.inventoryProductDetail.findUnique({
+          where: { id: Number(inventoryProductDetailId) },
+          include: { 
+            grInventoryProduct: {
+              include: { grDetails: true }
+            } 
+          }
+        });
+
+        if (!inventoryDetail) {
+          throw new Error(`Inventory Item not found: ${inventoryProductDetailId}`);
+        }
+
+        await tx.inventoryProductDetail.update({
+          where: { id: inventoryDetail.id },
+          data: {
+            serialNo1: serialNo1 ?? null,
+            sapCode: sapCode ?? null,
+            modelName: modelName ?? null,
+            assignedStatus: "InStock",
+            updatedBy: userId,
+          }
+        });
+
+        if (warrantyTill) {
+          await tx.gRInventoryProduct.update({
+            where: { id: inventoryDetail.grInventoryProductId },
+            data: {
+              warrantyTill: new Date(warrantyTill)
+            }
+          });
+        }
+
+        if (specValues && Array.isArray(specValues)) {
+          for (const spec of specValues) {
+            await tx.gRProductSpecValue.create({
+              data: {
+                grInventoryProductDetailId: inventoryDetail.id,
+                specFieldId: Number(spec.specFieldId),
+                value: spec.value,
+                createdBy: userId,
+                updatedBy: userId,
+              }
+            });
+          }
+        }
+
+        const existingQr = await tx.inventoryProductQr.findUnique({
+          where: { inventoryProductDetailId: inventoryDetail.id }
+        });
+
+        if (!existingQr) {
+          const qrCodeUrl = await generateQRCode({
+            inventoryProductDetailId: inventoryDetail.uuid,
+            grId: String(inventoryDetail.grInventoryProduct.grDetails.grId),
+          });
+          await tx.inventoryProductQr.create({
+            data: {
+              inventoryProductDetailId: inventoryDetail.id,
+              qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""),
+            }
+          });
+        }
+      }
+
+      let currentGrDetailsId: number | null = null;
+      if (items.length > 0) {
+        const firstDetail = await tx.inventoryProductDetail.findUnique({
+          where: { id: Number(items[0].inventoryProductDetailId) },
+          include: { grInventoryProduct: true }
+        });
+        if (firstDetail) currentGrDetailsId = firstDetail.grInventoryProduct.grDetailsId;
+      }
+
+      if (currentGrDetailsId) {
+        const untaggedCount = await tx.inventoryProductDetail.count({
+          where: {
+            grInventoryProduct: { grDetailsId: currentGrDetailsId },
+            assignedStatus: "Untagged"
+          }
+        });
+        if (untaggedCount === 0) {
+          await tx.gRDetail.update({
+            where: { id: currentGrDetailsId },
+            data: { isTagged: true }
+          });
+        }
+      }
+    });
+
+    return successResponse(res, 200, "Items tagged successfully", null, null);
+  } catch (error: any) {
+    console.log("error", error);
+    next(new ErrorHandler(error.message, 500));
+  }
+};
 
 export const tagItem = async (
   req: Request,
