@@ -715,13 +715,7 @@ export const getInventoryByStatus = async (
       whereCondition.OR = [
         {
           assignedStatus: {
-            notIn: [
-              AssignedStatus.E_WASTE,
-              AssignedStatus.BLOCKED,
-              AssignedStatus.ASSIGNED,
-              AssignedStatus.WRITE_OFF,
-              "Untagged",
-            ],
+            notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
           },
         },
       ];
@@ -1077,7 +1071,7 @@ export const allAsset = async (
     const whereClause: any = {
       status: true,
       assignedStatus: {
-        notIn: [AssignedStatus.E_WASTE, AssignedStatus.WRITE_OFF, "Untagged"],
+        notIn: [AssignedStatus.E_WASTE, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
       },
     };
 
@@ -1191,13 +1185,7 @@ export const allAsset = async (
         whereClause.OR = [
           {
             assignedStatus: {
-              notIn: [
-                AssignedStatus.E_WASTE,
-                AssignedStatus.BLOCKED,
-                AssignedStatus.ASSIGNED,
-                AssignedStatus.WRITE_OFF,
-                "Untagged",
-              ],
+              notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
             },
           },
         ];
@@ -1814,13 +1802,7 @@ export const getInventorySummary = async (
     const whereClause: any = {
       status: true,
       assignedStatus: {
-        notIn: [
-          AssignedStatus.E_WASTE,
-          AssignedStatus.BLOCKED,
-          AssignedStatus.ASSIGNED,
-          AssignedStatus.WRITE_OFF,
-          "Untagged",
-        ],
+        notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
       },
       AND: [],
     };

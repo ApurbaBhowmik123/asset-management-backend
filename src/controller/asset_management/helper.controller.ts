@@ -387,10 +387,11 @@ export const fetchAssignDetails = async (
       : "createdAt";
 
     // Build the base where clause for filtering
+    const requestedStatus = req.query.status as string;
     const baseWhereClause: Prisma.ProductAssignmentWhereInput = {
-      status: {
-        in: [AssignmentStatus.Active],
-      },
+        status: {
+          in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Active],
+        },
       assignedToUserId: { not: null }, // Only assignments to users, not locations
     };
 
@@ -604,7 +605,7 @@ export const fetchAssignDetailsSingle = async (
       where: {
         assignedId,
         status: {
-          in: [AssignmentStatus.Active, AssignmentStatus.Returned],
+          in: [AssignmentStatus.Active, AssignmentStatus.Returned, AssignmentStatus.PendingReturn],
         },
       },
       include: {
@@ -701,10 +702,10 @@ export const fetchAssignDetailsSingle = async (
         return {
           inventorProductId: assignment.inventoryProductDetail.id,
           AssetID: assignment.inventoryProductDetail.uuid,
-          id: grProduct.product.id,
-          name: grProduct.product.name,
-          brand: grProduct.product.brand,
-          category: grProduct.product.category,
+          id: grProduct.product?.id || null,
+          name: grProduct.product?.name || "Unknown Product",
+          brand: grProduct.product?.brand || grProduct.brand || null,
+          category: grProduct.product?.category || grProduct.category || null,
           
           serialNo1: assignment.inventoryProductDetail.serialNo1,
           serialNo2: assignment.inventoryProductDetail.serialNo2,

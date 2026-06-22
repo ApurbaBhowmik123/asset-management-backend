@@ -311,8 +311,12 @@ export const unassignAsset = async (
         assignedId: { in: assignmentIds },
       },
       data: {
-        status: AssignmentStatus.Returned,
+        status: AssignmentStatus.PendingReturn,
       },
+    });
+    await prisma.inventoryProductDetail.updateMany({
+      where: { id: { in: inventoryProductIds } },
+      data: { assignedStatus: AssignedStatus.PENDING_RETURN },
     });
     const updatedAssignments = await prisma.productAssignment.findMany({
       where: {
@@ -320,62 +324,7 @@ export const unassignAsset = async (
         assignedId: { in: assignmentIds },
       },
     });
-    const inventoryDetails = await prisma.inventoryProductDetail.findMany({
-      where: {
-        id: { in: inventoryProductIds },
-      },
-      include: {
-        grInventoryProduct: {
-          include: {
-            product: {
-              include: {
-                category: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Step 2: Split into categories
-    const itAssetIds: number[] = [];
-    const otherIds: number[] = [];
-
-    for (const detail of inventoryDetails) {
-      const categoryName = detail.grInventoryProduct?.product?.category?.name;
-
-      if (categoryName === "IT Assets") {
-        itAssetIds.push(detail.id);
-      } else {
-        otherIds.push(detail.id);
-      }
-    }
-
-    // Step 3: Update `InstallationComplete` for IT Assets
-    if (itAssetIds.length > 0) {
-      await prisma.inventoryProductDetail.updateMany({
-        where: {
-          id: { in: itAssetIds },
-        },
-        data: {
-          assignedStatus: AssignedStatus.InstallationCompleted,
-        },
-      });
-    }
-
-    // Step 4: Update `InStock` for others
-    if (otherIds.length > 0) {
-      await prisma.inventoryProductDetail.updateMany({
-        where: {
-          id: { in: otherIds },
-        },
-        data: {
-          assignedStatus: AssignedStatus.InStock,
-        },
-      });
-    }
-
-    const updatedInventoryDetails =
+        const updatedInventoryDetails =
       await prisma.inventoryProductDetail.findMany({
         where: {
           id: { in: inventoryProductIds },
@@ -441,7 +390,7 @@ export const unassignAsset = async (
           inventoryProductId,
           logDetails,
           productUnassignment.createdAt,
-          "UnAssigning Product",
+          "unassigned",
           userId,
           log.id,
           null,

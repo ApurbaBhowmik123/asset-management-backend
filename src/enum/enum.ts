@@ -1,14 +1,17 @@
 export enum AssignedStatus {
   InStock = "InStock",
   ASSIGNED = "ASSIGNED",
+  PENDING_RETURN = "PENDING_RETURN",
   InstallationCompleted = "InstallationCompleted",
   BLOCKED = "BLOCKED",
   E_WASTE = "E-WASTE",
   WRITE_OFF = "WRITE-OFF",
+  SCRAP = "SCRAP",
 }
 
 export enum AssignmentStatus {
   Active = "Active",
+  PendingReturn = "Pending Return",
   Returned = "Returned",
   Revoked = "Revoked",
   Handovered = "Handovered",

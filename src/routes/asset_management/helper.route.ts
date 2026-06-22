@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { hasPermission } from "@middlewares/permission.middleware";
+import { scrapAsset } from "@src/controller/asset_management/scrap.controller";
 import {
   fetchUserList,
   fetchAssignableProducList,
@@ -43,4 +44,12 @@ assethelprouter.get(
 
 assethelprouter.get("/test-matrix-data", getFilterMatrix);
 
+assethelprouter.post(
+  "/scrap-asset/:id",
+  hasPermission("update-asset"),
+  scrapAsset
+);
+
 export default assethelprouter;
+
+

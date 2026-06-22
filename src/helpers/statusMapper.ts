@@ -14,6 +14,8 @@ export function mapStatusParamToEnum(
       return AssignedStatus.BLOCKED;
     case "E_WASTE":
       return AssignedStatus.E_WASTE;
+    case "SCRAP":
+      return AssignedStatus.SCRAP;
     default:
       return null;
   }

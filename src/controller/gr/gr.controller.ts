@@ -154,6 +154,19 @@ export const createGr = async (
               qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""), // Store relative path
             }
           });
+
+          // Create LogReport entry for Asset Initialization (GR)
+          await createLogReport(
+            createdDetail.uuid,
+            createdDetail.id,
+            product.description ? `Received via GR: ${product.description}` : "Received via GR",
+            new Date(),
+            "create gr",
+            userId,
+            null,
+            `${process.env.FRONTEND_URL}/product-details/${createdDetail.uuid}`,
+            "InStock"
+          );
       }
     }
 

@@ -48,6 +48,19 @@ export const assignAsset = async (
         )
       );
     }
+
+    const parsedStartDate = new Date(start_date);
+    if (isNaN(parsedStartDate.getTime())) {
+      return next(new ErrorHandler("Invalid start_date format", 400));
+    }
+
+    let parsedEndDate = null;
+    if (end_date) {
+      parsedEndDate = new Date(end_date);
+      if (isNaN(parsedEndDate.getTime())) {
+        return next(new ErrorHandler("Invalid end_date format", 400));
+      }
+    }
     let assignedToUser = null;
 
     const assignedId = uuidv4();
@@ -69,7 +82,7 @@ export const assignAsset = async (
         where: {
           inventoryProductDetailId: Number(productId),
           status: {
-            in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+            in: [AssignmentStatus.Handovered],
           },
         },
       });
@@ -157,7 +170,7 @@ export const assignAsset = async (
         productId,
         logDetails,
         assignment.createdAt,
-        "Product Assignment",
+        "assigned product",
         userId,
         log.id,
         `${process.env.FRONTEND_URL}/assetmanagement/assigndetails/${assignedId}`,
@@ -313,6 +326,7 @@ export const getAssignList = async (
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
+    const requestedStatus = req.query.status as string;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
     const sortBy = (req.query.sortBy as string) || "createdAt";
@@ -443,7 +457,7 @@ export const getAssignList = async (
       assignments = await prisma.productAssignment.findMany({
         where: {
           status: {
-            in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+            in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
         },
@@ -501,6 +515,8 @@ export const getAssignList = async (
               grInventoryProduct: {
                 select: {
                   id: true,
+                  brand: { select: { id: true, name: true } },
+                  category: { select: { id: true, name: true } },
                   product: {
                     select: {
                       id: true,
@@ -546,7 +562,7 @@ export const getAssignList = async (
       totalCount = await prisma.productAssignment.count({
         where: {
           status: {
-            in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+            in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
         },
@@ -555,7 +571,7 @@ export const getAssignList = async (
       assignments = await prisma.productAssignment.findMany({
         where: {
           status: {
-            in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+            in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
           inventoryProductDetail: {
@@ -616,6 +632,8 @@ export const getAssignList = async (
               grInventoryProduct: {
                 select: {
                   id: true,
+                  brand: { select: { id: true, name: true } },
+                  category: { select: { id: true, name: true } },
                   product: {
                     select: {
                       id: true,
@@ -643,7 +661,7 @@ export const getAssignList = async (
       totalCount = await prisma.productAssignment.count({
         where: {
           status: {
-            in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+            in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
           inventoryProductDetail: {
@@ -686,7 +704,7 @@ export const getAssignDetails = async (
       where: {
         assignedId,
         // status: {
-        //   in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+        //   in: [AssignmentStatus.Handovered],
         // },
       },
       include: {
@@ -788,11 +806,11 @@ export const getAssignDetails = async (
         const grProduct = assignment.inventoryProductDetail.grInventoryProduct;
         return {
           inventorProductId: assignment.inventoryProductDetail.id,
-          id: grProduct.product.id,
-          name: grProduct.product.name,
-          brand: grProduct.product.brand,
-          category: grProduct.product.category,
-          subcategory: grProduct.product.subcategory,
+          id: grProduct.product?.id || null,
+          name: grProduct.product?.name || "Unknown Product",
+          brand: grProduct.product?.brand || grProduct.brand || null,
+          category: grProduct.product?.category || grProduct.category || null,
+          subcategory: grProduct.product?.subcategory || null,
           serialNo1: assignment.inventoryProductDetail.serialNo1,
           serialNo2: assignment.inventoryProductDetail.serialNo2,
           qrCode: assignment.inventoryProductDetail.qrCode?.qrCodeUrl,
