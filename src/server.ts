@@ -10,6 +10,7 @@ import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger";
 import path from "path";
 import { initCronJobs } from "./cron/closeTicket";
+import { initSoftwareCronJobs } from "./cron/autoUnassignSoftware";
 const app = express();
 app.use(express.json());
 
@@ -44,6 +45,7 @@ app.use("/api", appRouter);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 initCronJobs();
+initSoftwareCronJobs();
 
 app.get("/", (req, res) => {
   res.send("Welcome to the Asset Management System");

@@ -63,7 +63,11 @@ export const assignAsset = async (
     }
     let assignedToUser = null;
 
-    const assignedId = uuidv4();
+    const assignedId = await generateNextCode(
+      prisma.productAssignment,
+      "assignedId",
+      "mg-ass-"
+    );
 
     const assignments: any[] = [];
     const updatedProducts: any[] = [];

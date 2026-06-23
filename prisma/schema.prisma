@@ -158,6 +158,7 @@ model User {
   softAssignedTo   SoftWareAssignment[] @relation("SoftwareAssignedTo")
   softLogs         SoftWareLog[]        @relation("SoftwareLogUser")
   softwareAssigned SoftWareAssignment[] @relation("SoftwareAssignedBy")
+  softwareUnassignmentsCreated SoftWareUnAssignment[] @relation("SoftwareUnAssignmentCreatedBy")
 
   EwasteRequestApprove  EwasteRequestApprove[] @relation("EwasteApprovedCreatedBy")
   EwasteRequestReviewer EwasteRequestApprove[] @relation("EwasteApprovedReviewedBy")
@@ -223,6 +224,7 @@ model Unit {
   productTransferFrom    ProductTransfer[]        @relation("productTransferForm")
   productTransferTo      ProductTransfer[]        @relation("productTransferTo")
   mailConfigs            MailConfig[]             @relation("MailConfigUnit")
+  softwareAssignments    SoftWareAssignment[]     @relation("SoftwareAssignedToUnit")
 
   @@map("units")
 }
@@ -743,6 +745,7 @@ model Location {
 
   users                   User[]                   @relation("UserLocation")
   inventoryProductDetails InventoryProductDetail[] @relation("LocationToInventoryProductDetail")
+  softwareAssignments     SoftWareAssignment[]     @relation("SoftwareAssignedToLocation")
 
   @@map("locations")
 }
@@ -1132,15 +1135,46 @@ model SoftWare {
 
 model SoftWareAssignment {
   id             Int      @id @default(autoincrement())
+  assignedId     String?
   softwareId     Int
+  unitId         Int?
+  locationId     Int?
   assignedTo     Int?
   quantity       Int      @default(1)
   status         String
+  notes          String?
   assignedAt     DateTime @default(now())
   assignedBy     Int
+  expiryDate     DateTime?
+  
   software       SoftWare @relation("softwareDetails", fields: [softwareId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   assignedByUser User     @relation("SoftwareAssignedBy", fields: [assignedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   assignedUser   User?    @relation("SoftwareAssignedTo", fields: [assignedTo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedUnit     Unit?     @relation("SoftwareAssignedToUnit", fields: [unitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedLocation Location? @relation("SoftwareAssignedToLocation", fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  unassignments SoftWareUnAssignment[] @relation("SoftwareUnAssignmentToAssignment")
+
+  @@map("software_assignments")
+}
+
+model SoftWareUnAssignment {
+  id                   Int      @id @default(autoincrement())
+  uuid                 String   @unique @default(uuid())
+  softwareAssignmentId Int
+  unassignedQuantity   Int
+  unassignmentDate     DateTime
+  remarks              String?
+  condition            String?
+  createdById          Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  softwareAssignment SoftWareAssignment @relation("SoftwareUnAssignmentToAssignment", fields: [softwareAssignmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy          User                 @relation("SoftwareUnAssignmentCreatedBy", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("software_unassignments")
 }
 
 model SoftWareLog {

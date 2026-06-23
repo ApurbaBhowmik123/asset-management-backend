@@ -77,6 +77,7 @@ export const getsoftwares = async (
   }
 };
 
+
 export const getSoftwareById = async (
   req: Request,
   res: Response,
@@ -142,6 +143,7 @@ export const getSoftwareById = async (
   }
 };
 
+
 export const createSoftware = async (
   req: Request,
   res: Response,
@@ -201,6 +203,7 @@ export const createSoftware = async (
     );
   }
 };
+
 
 export const updateSoftware = async (
   req: Request,
@@ -269,16 +272,23 @@ export const updateSoftware = async (
   }
 };
 
+
 export const getAllSoftware = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
+    const { licenseType } = req.query;
+    const whereClause: any = licenseType ? { LicenseType: licenseType as string } : {};
+    whereClause.currentQuantity = { gt: 0 };
     const softwares = await prisma.softWare.findMany({
+      where: whereClause,
       select: {
         id: true,
         name: true,
+        currentQuantity: true,
+        LicenseType: true,
       },
     });
     return successResponse(
@@ -375,6 +385,7 @@ export const getAllSoftware = async (
  * - Assigns newly added (not previously assigned)
  * - Unassigns removed (previously assigned but not in softwareIds)
  */
+
 export const assignSoftware = async (
   req: Request,
   res: Response,
@@ -382,137 +393,79 @@ export const assignSoftware = async (
 ) => {
   try {
     const actingUserId = Number((req as any)?.user?.id ?? 0);
-    const { assignToUser, softwareIds, quantity } = req.body;
+    const { unitId, locationId, assignToUser, notes, items, expiryDate } = req.body;
 
-    const targetUserId = Number(assignToUser);
-    if (!targetUserId || !Array.isArray(softwareIds)) {
-      return next(
-        new ErrorHandler("assignToUser and softwareIds are required", 400)
-      );
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return next(new ErrorHandler("Items array is required", 400));
     }
 
-    // normalize: unique & ints
-    const finalSelectedIds = [
-      ...new Set(softwareIds.map((id: any) => Number(id))),
-    ];
+    if (!unitId && !locationId && !assignToUser) {
+      return next(new ErrorHandler("Must specify assignment destination (Unit, Location, or User)", 400));
+    }
 
-    // 1) Current active assignments
-    const existingAssignments = await prisma.softWareAssignment.findMany({
-      where: { assignedTo: targetUserId, status: "ASSIGNED" },
-      select: { id: true, softwareId: true, quantity: true },
-    });
+    const assignedId = await generateNextCode(prisma.softWareAssignment, "assignedId", "mg-sass-");
+    
+    const results: any[] = [];
+    
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const { softwareId, quantity } = item;
+        const qty = Math.max(1, Number(quantity ?? 1));
 
-    const existingIds = new Set(existingAssignments.map((a) => a.softwareId));
+        const software = await tx.softWare.findUnique({
+          where: { id: Number(softwareId) },
+        });
 
-    // 2) Diffs
-    const toAssign = finalSelectedIds.filter((id) => !existingIds.has(id));
-    const toUnassign = existingAssignments.filter(
-      (a) => !finalSelectedIds.includes(a.softwareId)
-    );
+        if (!software) throw new Error(`Software with id ${softwareId} not found`);
 
-    const qty = Math.max(1, Number(quantity ?? 1));
-    const results: Array<{ action: "ASSIGNED" | "UNASSIGNED"; data: any }> = [];
+        if (software.currentQuantity < qty) {
+          throw new Error(
+            `Not enough quantity for ${software.name}. Available: ${software.currentQuantity}, requested: ${qty}`
+          );
+        }
 
-    // 3) Assign new
-    for (const softwareId of toAssign) {
-      const software = await prisma.softWare.findUnique({
-        where: { id: softwareId },
-      });
-      if (!software)
-        throw new Error(`Software with id ${softwareId} not found`);
-      // if (software.currentQuantity < qty) {
-      //   throw new Error(
-      //     `Not enough quantity for ${software.name}. Available: ${software.currentQuantity}, required: ${qty}`
-      //   );
-      // }
-
-      // batch transaction (fast)
-      const [updatedSoftware, assignment] = await prisma.$transaction([
-        prisma.softWare.update({
-          where: { id: softwareId },
+        // decrement quantity
+        await tx.softWare.update({
+          where: { id: Number(softwareId) },
           data: { currentQuantity: { decrement: qty } },
-        }),
-        prisma.softWareAssignment.create({
+        });
+
+        // create assignment
+        const assignment = await tx.softWareAssignment.create({
           data: {
-            softwareId,
-            assignedTo: targetUserId,
+            assignedId,
+            softwareId: Number(softwareId),
+            unitId: unitId ? Number(unitId) : null,
+            locationId: locationId ? Number(locationId) : null,
+            assignedTo: assignToUser ? Number(assignToUser) : null,
             quantity: qty,
+            notes: notes || null,
             assignedBy: actingUserId,
             status: "ASSIGNED",
+            expiryDate: expiryDate ? new Date(expiryDate) : null
           },
-        }),
-      ]);
+        });
 
-      // logging OUTSIDE transaction
-      createSoftwareLog({
-        softwareId,
-        userId: actingUserId,
-        action: "ASSIGN",
-        actionDetails: `Assigned ${qty} of ${software.name} to user ${targetUserId}`,
-      }).catch(console.error);
+        results.push(assignment);
 
-      results.push({ action: "ASSIGNED", data: assignment });
-    }
-
-    // 4) Unassign removed
-    for (const {
-      id: assignmentId,
-      softwareId,
-      quantity: assignedQty,
-    } of toUnassign) {
-      const software = await prisma.softWare.findUnique({
-        where: { id: softwareId },
-      });
-      if (!software) continue;
-
-      const [updatedSoftware, updatedAssignment] = await prisma.$transaction([
-        prisma.softWare.update({
-          where: { id: softwareId },
-          data: { currentQuantity: { increment: assignedQty } },
-        }),
-        prisma.softWareAssignment.update({
-          where: { id: assignmentId },
-          data: { status: "UNASSIGNED" },
-        }),
-      ]);
-
-      createSoftwareLog({
-        softwareId,
-        userId: actingUserId,
-        action: "UNASSIGN",
-        actionDetails: `Unassigned ${assignedQty} of ${software.name} from user ${targetUserId}`,
-      }).catch(console.error);
-
-      results.push({ action: "UNASSIGNED", data: updatedAssignment });
-    }
-
-    // 5) Return updated user
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      include: {
-        softAssignedTo: {
-          where: { status: "ASSIGNED" },
-          include: { software: true },
-        },
-      },
+        // log
+        await tx.softWareLog.create({
+          data: {
+            softwareId: Number(softwareId),
+            userId: actingUserId,
+            action: "ASSIGN",
+            actionDetails: `Assigned software ${software.name} with quantity ${qty} (Assignment ID: ${assignedId})`,
+          }
+        });
+      }
     });
 
-    return successResponse(
-      res,
-      200,
-      "Software assignment updated",
-      {
-        actions: results,
-        user: updatedUser,
-      },
-      null
-    );
+    return successResponse(res, 200, "Software assigned successfully", results, null);
   } catch (error: any) {
-    return next(
-      new ErrorHandler(error?.message || "Internal Server Error", 500)
-    );
+    return next(new ErrorHandler(error.message || "Internal Server Error", error.message?.includes("Not enough") ? 400 : 500));
   }
 };
+
 
 export const getSoftwareLogs = async (
   req: Request,
@@ -522,59 +475,321 @@ export const getSoftwareLogs = async (
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const search = (req.query.search as string) || "";
-    const sortBy = (req.query.sortBy as string) || "createdAt";
-    const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
+    const softwareId = req.query.softwareId ? parseInt(req.query.softwareId as string) : undefined;
+    const skip = (page - 1) * limit;
 
-    const allowedSortFields = ["softwareId", "uuid", "action", "actionDetails"];
-    const finalSortBy = allowedSortFields.includes(sortBy)
-      ? sortBy
-      : "createdAt";
-
-    const searchTerms = search.split(" ");
-    const searchConditions = searchTerms.map((term) => ({
-      OR: [
-        { action: { contains: term } },
-        { actionDetails: { contains: term } },
-      ],
-    }));
+    const whereFilters: any = {};
+    if (softwareId) whereFilters.softwareId = softwareId;
 
     const logs = await prisma.softWareLog.findMany({
-      where: {
-        AND: [search ? { OR: searchConditions } : {}],
-      },
-      orderBy: {
-        [finalSortBy]: sortOrder,
-      },
-      take: limit,
-      skip: (page - 1) * limit,
+      where: whereFilters,
       include: {
-        user: {
-          select: { id: true, name: true },
-        },
-        software: {
-          select: {
-            id: true,
-            name: true,
-            LicenseType: true,
-            IssueDate: true,
-            ExpiryDate: true,
-          },
-        },
+        software: true,
+        user: true,
       },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
-    const totalCount = await prisma.softWareLog.count({
-      where: {
-        AND: [search ? { OR: searchConditions } : {}],
-      },
-    });
+
+    const totalCount = await prisma.softWareLog.count({ where: whereFilters });
+
     return successResponse(
       res,
       200,
-      "Software logs retrieved",
+      "Software Logs retrieved",
       createPagedResponse(logs, page, limit, totalCount),
       null
     );
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal Server Error", 500));
+  }
+};
+
+export const unassignSoftware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const actingUserId = Number((req as any)?.user?.id ?? 0);
+    const { items, unassignmentDate, remarks, condition } = req.body;
+
+    // items should be [{ assignmentId: number, quantity: number }]
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return next(new ErrorHandler("Items array is required", 400));
+    }
+
+    const results: any[] = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const { assignmentId, quantity } = item;
+        const unassignQty = Number(quantity);
+
+        const assignment = await tx.softWareAssignment.findUnique({
+          where: { id: Number(assignmentId) },
+          include: { software: true }
+        });
+
+        if (!assignment) throw new Error(`Assignment ${assignmentId} not found`);
+        if (assignment.status === "UNASSIGNED") throw new Error(`Assignment ${assignmentId} is already unassigned`);
+        if (assignment.quantity < unassignQty) throw new Error(`Cannot unassign more than assigned quantity`);
+
+        // create unassignment record
+        const unassignment = await tx.softWareUnAssignment.create({
+          data: {
+            softwareAssignmentId: assignment.id,
+            unassignedQuantity: unassignQty,
+            unassignmentDate: new Date(unassignmentDate || Date.now()),
+            remarks: remarks || null,
+            condition: condition || null,
+            createdById: actingUserId,
+          }
+        });
+
+        // update assignment status and quantity
+        const newQty = assignment.quantity - unassignQty;
+        await tx.softWareAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            quantity: newQty,
+            status: newQty === 0 ? "UNASSIGNED" : "ASSIGNED"
+          }
+        });
+
+        // restore quantity to software pool
+        await tx.softWare.update({
+          where: { id: assignment.softwareId },
+          data: { currentQuantity: { increment: unassignQty } },
+        });
+
+        // create log
+        await tx.softWareLog.create({
+          data: {
+            softwareId: assignment.softwareId,
+            userId: actingUserId,
+            action: "UNASSIGN",
+            actionDetails: `Unassigned quantity ${unassignQty} from Assignment ID: ${assignment.assignedId}. Remarks: ${remarks || 'None'}`,
+          }
+        });
+
+        results.push(unassignment);
+      }
+    });
+
+    return successResponse(res, 200, "Software unassigned successfully", results, null);
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal Server Error", 500));
+  }
+};
+
+
+export const getAssignSoftwareList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || "";
+    const unitId = req.query.unitId ? parseInt(req.query.unitId as string) : undefined;
+    const locationId = req.query.locationId ? parseInt(req.query.locationId as string) : undefined;
+    const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+    const licenseType = req.query.licenseType as string;
+    const softwareId = req.query.softwareId ? parseInt(req.query.softwareId as string) : undefined;
+    const expiryDate = req.query.expiryDate as string;
+
+    const skip = (page - 1) * limit;
+
+    const whereFilters: any = {};
+    if (unitId) whereFilters.unitId = unitId;
+    if (locationId) whereFilters.locationId = locationId;
+    if (userId) whereFilters.assignedTo = userId;
+    if (licenseType) whereFilters.software = { ...whereFilters.software, LicenseType: licenseType };
+    if (softwareId) whereFilters.softwareId = softwareId;
+    if (expiryDate) {
+      const expD = new Date(expiryDate);
+      whereFilters.expiryDate = { gte: expD, lt: new Date(expD.getTime() + 86400000) };
+    }
+
+    const assignments = await prisma.softWareAssignment.findMany({
+      where: whereFilters,
+      include: {
+        software: true,
+        assignedUser: true,
+        assignedUnit: true,
+        assignedLocation: true,
+        assignedByUser: true,
+      },
+      orderBy: { assignedAt: "desc" },
+    });
+
+    const groupsMap = new Map();
+    for (const a of assignments) {
+      if (a.status === "UNASSIGNED" && a.quantity === 0) continue;
+      
+      const key = a.assignedId || a.id.toString();
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, {
+          assignedId: key,
+          assignedAt: a.assignedAt,
+          status: a.status,
+          notes: a.notes,
+          assignedByUser: a.assignedByUser,
+          assignedUser: a.assignedUser,
+          assignedUnit: a.assignedUnit,
+          assignedLocation: a.assignedLocation,
+          products: []
+        });
+      }
+      
+      const g = groupsMap.get(key);
+      g.products.push({
+        id: a.id,
+        software: a.software,
+        quantity: a.quantity,
+      });
+    }
+
+    const groupedData = Array.from(groupsMap.values());
+    
+    const filteredData = search ? groupedData.filter(g => 
+      g.assignedId?.includes(search) || 
+      g.assignedUser?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      g.products.some((p: any) => p.software.name.toLowerCase().includes(search.toLowerCase()))
+    ) : groupedData;
+
+    const paginated = filteredData.slice(skip, skip + limit);
+
+    return successResponse(
+      res,
+      200,
+      "Software Assignments retrieved",
+      {
+        data: paginated,
+        pagination: {
+          page,
+          limit,
+          total: filteredData.length,
+          totalPages: Math.ceil(filteredData.length / limit),
+        },
+      },
+      null
+    );
+
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal Server Error", 500));
+  }
+};
+
+
+export const getUnassignSoftwareList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || "";
+    
+    const unassignments = await prisma.softWareUnAssignment.findMany({
+      include: {
+        softwareAssignment: {
+          include: {
+            software: true,
+            assignedUser: true,
+            assignedUnit: true,
+            assignedLocation: true,
+          }
+        },
+        createdBy: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const skip = (page - 1) * limit;
+
+    const filteredData = search ? unassignments.filter((u: any) => 
+      u.softwareAssignment?.assignedId?.includes(search) || 
+      u.softwareAssignment?.software?.name?.toLowerCase().includes(search.toLowerCase())
+    ) : unassignments;
+
+    const paginated = filteredData.slice(skip, skip + limit);
+
+    return successResponse(
+      res,
+      200,
+      "Software Unassignments retrieved",
+      {
+        data: paginated,
+        pagination: {
+          page,
+          limit,
+          total: filteredData.length,
+          totalPages: Math.ceil(filteredData.length / limit),
+        },
+      },
+      null
+    );
+
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal Server Error", 500));
+  }
+};
+
+
+export const deleteSoftware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const actingUserId = Number((req as any)?.user?.id ?? 0);
+    const softwareId = parseInt(req.params.id as string);
+
+    const software = await prisma.softWare.findUnique({
+      where: { id: softwareId }
+    });
+
+    if (!software) throw new Error("Software not found");
+
+    // create log before deleting
+    await prisma.softWareLog.create({
+      data: {
+        softwareId: software.id,
+        userId: actingUserId,
+        action: "DELETE",
+        actionDetails: `Deleted software ${software.name}`,
+      }
+    });
+
+    await prisma.softWare.delete({
+      where: { id: softwareId }
+    });
+
+    return successResponse(res, 200, "Software deleted successfully", null, null);
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message || "Internal Server Error", 500));
+  }
+};
+
+
+export const getLicenseTypes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const types = await prisma.softWare.findMany({
+      select: { LicenseType: true },
+      distinct: ['LicenseType'],
+    });
+    const licenseTypes = types.map(t => t.LicenseType).filter(Boolean);
+    return successResponse(res, 200, "License types retrieved", licenseTypes, null);
   } catch (error) {
     return next(
       new ErrorHandler(
@@ -584,3 +799,4 @@ export const getSoftwareLogs = async (
     );
   }
 };
+

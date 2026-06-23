@@ -10,6 +10,7 @@ import { formatDate } from "@src/utils/formatDate";
 import { AssignmentStatus } from "@src/enum/enum";
 import { getSafeStringOrUndefined } from "@utils/paramHelper";
 import { createLogReport } from "@src/utils/logReport";
+import { generateNextCode } from "@utils/codeGenerator";
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -44,6 +45,11 @@ export const returnHandoverAsset = async (
     }
     const handoverDetails = await prisma.productHandover.create({
       data: {
+        uuid: await generateNextCode(
+          prisma.productHandover,
+          "uuid",
+          "mg-ret-"
+        ),
         issuerId,
         signatureFile: signatureFileURL,
         userId: assignedDetails.issuerId, // Or who is returning it

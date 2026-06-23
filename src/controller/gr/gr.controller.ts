@@ -150,6 +150,11 @@ export const createGr = async (
 
           await prisma.inventoryProductQr.create({
             data: {
+              uuid: await generateNextCode(
+                prisma.inventoryProductQr,
+                "uuid",
+                "mg-qr-"
+              ),
               inventoryProductDetailId: createdDetail.id,
               qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""), // Store relative path
             }
@@ -833,6 +838,11 @@ export const bulkTagItem = async (
           });
           await tx.inventoryProductQr.create({
             data: {
+              uuid: await generateNextCode(
+                tx.inventoryProductQr,
+                "uuid",
+                "mg-qr-"
+              ),
               inventoryProductDetailId: inventoryDetail.id,
               qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""),
             }

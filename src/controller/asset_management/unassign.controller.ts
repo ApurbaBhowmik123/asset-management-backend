@@ -4,9 +4,9 @@ import { ErrorHandler } from "@utils/ErrorHandler";
 import { PrismaClient } from "../../../prisma/generated/prisma";
 import { AssignmentStatus, AssignedStatus } from "@src/enum/enum";
 import { createPagedResponse } from "@src/utils/pagedResponse";
-import { generateUniqueId } from "@utils/randomNumberGenerator";
+import { generateNextCode } from "@utils/codeGenerator";
 import { createLogReport } from "@src/utils/logReport";
-import { getSafeString } from "@utils/paramHelper";
+import { getSafeString, getSafeStringOrUndefined } from "@utils/paramHelper";
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -344,7 +344,11 @@ export const unassignAsset = async (
     for (const inventoryProductId of inventoryProductIds) {
       const productUnassignment = await prisma.productUnAssignment.create({
         data: {
-          uuid: generateUniqueId(),
+          uuid: await generateNextCode(
+            prisma.productUnAssignment,
+            "uuid",
+            "mg-assn-"
+          ),
           inventoryProductDetailId: inventoryProductId,
           approvedById: Number(approvedBy),
           unassignmentDate: new Date(approvedDate),
