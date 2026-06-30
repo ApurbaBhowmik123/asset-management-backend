@@ -2,15 +2,14 @@ import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
 import { generateNextCode } from "@src/utils/codeGenerator";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { AssetTransfer } from "@src/enum/enum";
 import { AssignedStatus } from "@src/enum/enum";
 import { createLogReport } from "@utils/logReport";
 import { createPagedResponse } from "@utils/pagedResponse";
 import * as dotenv from "dotenv";
+import prisma from "../../utils/prisma";
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const fetTransferableProductlist = async (
   req: Request,

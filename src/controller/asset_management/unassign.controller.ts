@@ -1,16 +1,15 @@
 import { successResponse } from "@utils/successResponse";
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { AssignmentStatus, AssignedStatus } from "@src/enum/enum";
 import { createPagedResponse } from "@src/utils/pagedResponse";
 import { generateNextCode } from "@utils/codeGenerator";
 import { createLogReport } from "@src/utils/logReport";
 import { getSafeString, getSafeStringOrUndefined } from "@utils/paramHelper";
 import * as dotenv from "dotenv";
+import prisma from "../../utils/prisma";
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const getAssignedAssetsByUser = async (
   req: Request,

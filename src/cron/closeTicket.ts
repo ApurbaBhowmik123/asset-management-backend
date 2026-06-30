@@ -1,12 +1,11 @@
 import cron from 'node-cron';
-import { PrismaClient } from "../../prisma/generated/prisma";
 import { LogAction, TicketStatus } from '@src/enum/enum';
 import { createLog } from '@src/helpers/createLog';
 import { sendTicketEmail } from '@src/utils/mail';
 import { ticketAutoClosedTemplate } from '@src/emails/tickets/ticketAutoClosedTemplate';
+import prisma from "../utils/prisma";
 
 
-const prisma = new PrismaClient();
 
 
 export const autoCloseOldTickets = async () => {

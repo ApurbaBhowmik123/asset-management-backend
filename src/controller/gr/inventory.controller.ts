@@ -1,13 +1,12 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import e, { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { mapStatusParamToEnum } from "@src/helpers/statusMapper";
 import { AssignedStatus, AssignmentStatus } from "@src/enum/enum";
 import { getSafeString } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getInventory = async (
   req: Request,

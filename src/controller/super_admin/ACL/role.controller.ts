@@ -1,11 +1,10 @@
 import { successResponse } from "../../../utils/successResponse";
 import { ErrorHandler } from "../../../utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../../prisma/generated/prisma";
 import { generateSlug } from "../../../common/generate_slug";
 import { createPagedResponse } from "../../../utils/pagedResponse";
+import prisma from "../../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getAllRoles = async (
   req: Request,

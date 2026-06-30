@@ -3,8 +3,8 @@ import { PrismaClient } from "../../prisma/generated/prisma/client";
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { getSafeStringOrUndefined } from "@utils/paramHelper";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getAssetById = async (
   req: Request,

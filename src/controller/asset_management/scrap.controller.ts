@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { AssignedStatus } from "@src/enum/enum";
 import { getSafeString } from "@utils/paramHelper";
 import { createLogReport } from "@utils/logReport";
 import { ErrorHandler } from "@utils/ErrorHandler";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const scrapAsset = async (
   req: Request,

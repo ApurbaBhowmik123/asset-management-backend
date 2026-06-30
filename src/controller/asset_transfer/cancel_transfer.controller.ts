@@ -1,14 +1,13 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { AssignedStatus, AssetTransfer, LogAction } from "@src/enum/enum";
 import { createLogReport } from "@utils/logReport";
 import { getSafeString } from "@utils/paramHelper";
 import * as dotenv from "dotenv";
+import prisma from "../../utils/prisma";
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const cancelTransfer = async (
   req: Request,

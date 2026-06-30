@@ -1,9 +1,8 @@
 import jwt from "jsonwebtoken";
-import { PrismaClient } from "../../prisma/generated/prisma";
 import { Response } from "express";
 import * as dotenv from "dotenv";
+import prisma from "../utils/prisma";
 dotenv.config();
-const prisma = new PrismaClient();
 
 const jwtSecret: string = process.env.JWT_SECRET || "defaultSecret";
 

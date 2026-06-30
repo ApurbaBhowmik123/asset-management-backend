@@ -1,14 +1,16 @@
+import type * as ExcelJSType from "exceljs";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
 import ExcelJS from "exceljs";
 import { successResponse } from "@src/utils/successResponse";
-import { PrismaClient } from "../../../prisma/generated/prisma";
-const prisma = new PrismaClient();
+
+
 import { generateUniqueId } from "@utils/randomNumberGenerator";
 import { formatDate } from "@utils/formatDate";
 import { sendInstallationEmail } from "@utils/mail";
 import { LogAction } from "@src/enum/enum";
 import { MailActions } from "@src/enum/enum";
+import prisma from "../../utils/prisma";
 
 const softwareFieldMap: { [key: string]: number } = {
   AV: 1,
@@ -42,7 +44,8 @@ export const downloadSampleInstallationXL = async (
   next: NextFunction
 ) => {
   try {
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSModule = require("exceljs");
+    const workbook = new ExcelJSModule.Workbook();
     const worksheet = workbook.addWorksheet("Sample Data");
 
     // Define headers
@@ -142,7 +145,7 @@ export const downloadSampleInstallationXL = async (
     }));
 
     // Add rows
-    data.forEach((row) => {
+    data.forEach((row: any) => {
       worksheet.addRow(row);
     });
 
@@ -179,14 +182,15 @@ export const readXlsx = async (
       return next(new ErrorHandler("No file uploaded", 400));
     }
 
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSModule = require("exceljs");
+    const workbook = new ExcelJSModule.Workbook();
     // @ts-ignore
     await workbook.xlsx.load(Buffer.from(req.file.buffer as Uint8Array));
 
     const worksheet = workbook.worksheets[0];
     const rows: any[] = [];
 
-    worksheet.eachRow({ includeEmpty: false }, (row) => {
+    worksheet.eachRow({ includeEmpty: false }, (row: any) => {
       const values = Array.isArray(row.values) ? row.values.slice(1) : [];
       rows.push(values);
     });

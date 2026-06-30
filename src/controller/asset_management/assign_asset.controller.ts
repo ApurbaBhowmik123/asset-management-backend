@@ -1,7 +1,6 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { sendAssignProductEmail } from "@utils/mail";
 import { generateNextCode } from "@utils/codeGenerator";
@@ -14,10 +13,10 @@ import { MailActions } from "@src/enum/enum";
 import { formatDate } from "@utils/formatDate";
 import { foundSuperAdminUnitAdmin } from "@src/utils/foundSuperAdminUnitAdmin";
 import { getSafeStringOrUndefined } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const assignAsset = async (
   req: Request,
@@ -125,7 +124,7 @@ export const assignAsset = async (
           where: { id: Number(productId) },
           data: {
             isUsed: true,
-            assignedStatus: AssignedStatus.ASSIGNED,
+            assignedStatus: AssignedStatus.BLOCKED,
           },
         }),
       ]);

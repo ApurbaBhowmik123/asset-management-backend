@@ -5,8 +5,8 @@ import { ErrorHandler } from "@utils/ErrorHandler";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { generateNextCode } from "@utils/codeGenerator";
 import { getSafeString } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export interface SpecFieldOption {
   id?: number;

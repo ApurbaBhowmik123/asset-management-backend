@@ -1,11 +1,10 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { AssignedStatus } from "@src/enum/enum";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getPendingAssetsService = async (
   req: Request,

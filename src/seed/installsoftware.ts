@@ -1,6 +1,6 @@
 import { PrismaClient } from "../../prisma/generated/prisma/client";
-const prisma = new PrismaClient();
 import { generateNextCode } from "../utils/codeGenerator";
+import prisma from "../utils/prisma";
 const installsoft = [
   {
     name: "Proxy",

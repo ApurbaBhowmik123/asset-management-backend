@@ -1,13 +1,12 @@
 import { successResponse } from "@utils/successResponse";
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { AssignedStatus, AssetTransfer, LogAction } from "@src/enum/enum";
 import { createLogReport } from "@src/utils/logReport";
 import { jsongenerateQRCode } from "@src/utils/jsonqrcodeGenerator";
 import { getSafeString } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const acceptTransfer = async (
   req: Request,

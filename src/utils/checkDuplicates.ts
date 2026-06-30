@@ -1,7 +1,7 @@
-import { PrismaClient } from "../../prisma/generated/prisma";
 import { ErrorHandler } from "./ErrorHandler";
+import prisma from "../utils/prisma";
+import { PrismaClient } from "../../prisma/generated/prisma";
 
-const prisma = new PrismaClient();
 
 interface DuplicateCheckOptions<T extends keyof PrismaClient> {
   model: T;
@@ -35,7 +35,7 @@ export const checkDuplicates = async <T extends keyof PrismaClient>({
     where.NOT = { id: excludeId };
   }
 
-  const duplicate = await (prisma[model] as any).findFirst({ where });
+  const duplicate = await (prisma as any)[model].findFirst({ where });
 
   if (duplicate) {
     for (const field of filteredFields) {

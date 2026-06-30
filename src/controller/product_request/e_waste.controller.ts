@@ -1,7 +1,6 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import e, { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { createPagedResponse } from "@src/utils/pagedResponse";
 import { AssignedStatus } from "@src/enum/enum";
 import { uploadFiles } from "@src/helpers/uploadFiles";
@@ -9,8 +8,8 @@ import { generateUniqueId } from "@src/utils/randomNumberGenerator";
 import { createLog } from "@src/helpers/createLog";
 import { createLogReport } from "@src/utils/logReport";
 import { LogAction } from "@src/enum/enum";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 // export const eWasteRequest = async (
 //   req: Request,

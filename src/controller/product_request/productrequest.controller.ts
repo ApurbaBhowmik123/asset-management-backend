@@ -1,7 +1,6 @@
 import { successResponse } from "@utils/successResponse";
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import {
   AssignedStatus,
   AssetTransfer,
@@ -14,8 +13,8 @@ import { createLogReport } from "@utils/logReport";
 import { generateUniqueId } from "@src/utils/randomNumberGenerator";
 import * as dotenv from "dotenv";
 import { getSafeString } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 dotenv.config();
-const prisma = new PrismaClient();
 
 export const productRequest = async (
   req: Request,

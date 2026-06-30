@@ -5,7 +5,7 @@ import { PrismaClient, Prisma } from "../../../prisma/generated/prisma";
 import { createPagedResponse } from "@src/utils/pagedResponse";
 import { AssignedStatus, AssignmentStatus } from "@src/enum/enum";
 import { getSafeStringOrUndefined } from "@utils/paramHelper";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const fetchUserList = async (
   req: Request,

@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "../utils/ErrorHandler";
-import { PrismaClient } from "../../prisma/generated/prisma";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const hasPermission = (requiredPermissionSlug: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {

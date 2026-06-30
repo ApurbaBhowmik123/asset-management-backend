@@ -1,5 +1,5 @@
 import { PrismaClient } from '../../prisma/generated/prisma/client';
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma";
 
 async function main() {
     const assignments = await prisma.productAssignment.findMany({

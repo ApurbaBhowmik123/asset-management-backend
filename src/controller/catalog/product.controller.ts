@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { generateNextCode } from "@utils/codeGenerator";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const getAllProducts = async (
   req: Request,

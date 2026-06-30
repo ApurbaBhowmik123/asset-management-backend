@@ -1,6 +1,5 @@
 import { Roles } from "@src/enum/enum";
-import { PrismaClient } from "../../prisma/generated/prisma";
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma";
 
 export const getAdminEmails = async (unitId: number | null) => {
   if (!unitId) return [];

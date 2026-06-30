@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { successResponse } from "../../utils/successResponse";
 import { ErrorHandler } from "../../utils/ErrorHandler";
 import { createPagedResponse } from "../../utils/pagedResponse";
@@ -22,9 +21,9 @@ import {
 } from "@src/helpers/getEmails";
 import { ticketClosedTemplate } from "@src/emails/tickets/ticket-closed-template";
 import { getSafeString } from "@src/utils/paramHelper";
+import prisma from "../../utils/prisma";
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const getTickets = async (
   req: Request,

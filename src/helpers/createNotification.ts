@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../prisma/generated/prisma";
 
 import * as dotenv from "dotenv";
+import prisma from "../utils/prisma";
 
 dotenv.config();
 
-const prisma = new PrismaClient();
 export const createNotification = async (
   userId: number | null,
 

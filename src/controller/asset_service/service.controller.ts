@@ -8,8 +8,8 @@ import { createPagedResponse } from "@src/utils/pagedResponse";
 import { createLogReport } from "@utils/logReport";
 import { generateNextCode } from "@utils/codeGenerator";
 import * as dotenv from "dotenv";
+import prisma from "../../utils/prisma";
 dotenv.config();
-const prisma = new PrismaClient();
 
 export const service = async (
   req: Request,

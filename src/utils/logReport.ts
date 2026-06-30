@@ -1,5 +1,4 @@
-import { PrismaClient } from "../../prisma/generated/prisma";
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma";
 
 export const createLogReport = async (
   transactionId: string,

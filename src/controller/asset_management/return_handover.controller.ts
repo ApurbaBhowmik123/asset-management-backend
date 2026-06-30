@@ -1,7 +1,6 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { uploadFiles } from "@src/helpers/uploadFiles";
 import { sendHandoverEmail } from "@utils/mail";
 import { MailActions, AssignedStatus } from "@src/enum/enum";
@@ -11,9 +10,9 @@ import { AssignmentStatus } from "@src/enum/enum";
 import { getSafeStringOrUndefined } from "@utils/paramHelper";
 import { createLogReport } from "@src/utils/logReport";
 import { generateNextCode } from "@utils/codeGenerator";
+import prisma from "../../utils/prisma";
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const returnHandoverAsset = async (
   req: Request,

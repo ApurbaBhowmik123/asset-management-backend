@@ -1,13 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { successResponse } from "../../utils/successResponse";
 import { ErrorHandler } from "../../utils/ErrorHandler";
 import { createPagedResponse } from "../../utils/pagedResponse";
 import * as dotenv from "dotenv";
 import { Roles, TicketPriority } from "@src/enum/enum";
+import prisma from "../../utils/prisma";
 
 dotenv.config();
-const prisma = new PrismaClient();
 
 export const ticketReport = async (req: Request, res: Response, next: NextFunction) => {
   try {

@@ -3,11 +3,12 @@ import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { createSoftwareLog } from "@utils/software.log";
-import { PrismaClient } from "../../../prisma/generated/prisma";
+
 import { generateNextCode } from "@utils/codeGenerator";
 import { getSafeString } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
+
 
 export const getsoftwares = async (
   req: Request,
@@ -448,13 +449,25 @@ export const assignSoftware = async (
 
         results.push(assignment);
 
+        let targetStr = "Unknown";
+        if (assignToUser) {
+          const user = await tx.user.findUnique({ where: { id: Number(assignToUser) } });
+          targetStr = user ? `User ${user.name}` : `User ID ${assignToUser}`;
+        } else if (unitId) {
+          const unit = await tx.unit.findUnique({ where: { id: Number(unitId) } });
+          targetStr = unit ? `Unit ${unit.name}` : `Unit ID ${unitId}`;
+        } else if (locationId) {
+          const loc = await tx.location.findUnique({ where: { id: Number(locationId) } });
+          targetStr = loc ? `Location ${loc.name}` : `Location ID ${locationId}`;
+        }
+
         // log
         await tx.softWareLog.create({
           data: {
             softwareId: Number(softwareId),
             userId: actingUserId,
             action: "ASSIGN",
-            actionDetails: `Assigned software ${software.name} with quantity ${qty} (Assignment ID: ${assignedId})`,
+            actionDetails: `Assigned software ${software.name} with quantity ${qty} to ${targetStr} (Assignment ID: ${assignedId})`,
           }
         });
       }
@@ -565,13 +578,25 @@ export const unassignSoftware = async (
           data: { currentQuantity: { increment: unassignQty } },
         });
 
+        let targetStr = "Unknown";
+        if (assignment.assignedTo) {
+          const user = await tx.user.findUnique({ where: { id: assignment.assignedTo } });
+          targetStr = user ? `User ${user.name}` : `User ID ${assignment.assignedTo}`;
+        } else if (assignment.unitId) {
+          const unit = await tx.unit.findUnique({ where: { id: assignment.unitId } });
+          targetStr = unit ? `Unit ${unit.name}` : `Unit ID ${assignment.unitId}`;
+        } else if (assignment.locationId) {
+          const loc = await tx.location.findUnique({ where: { id: assignment.locationId } });
+          targetStr = loc ? `Location ${loc.name}` : `Location ID ${assignment.locationId}`;
+        }
+
         // create log
         await tx.softWareLog.create({
           data: {
             softwareId: assignment.softwareId,
             userId: actingUserId,
             action: "UNASSIGN",
-            actionDetails: `Unassigned quantity ${unassignQty} from Assignment ID: ${assignment.assignedId}. Remarks: ${remarks || 'None'}`,
+            actionDetails: `Unassigned quantity ${unassignQty} from ${targetStr} (Assignment ID: ${assignment.assignedId}). Remarks: ${remarks || 'None'}`,
           }
         });
 

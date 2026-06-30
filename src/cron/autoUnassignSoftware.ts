@@ -1,8 +1,7 @@
 import cron from 'node-cron';
-import { PrismaClient } from "../../prisma/generated/prisma";
 import { v4 as uuidv4 } from "uuid";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const autoUnassignSoftware = async () => {
   try {

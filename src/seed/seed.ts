@@ -2,8 +2,8 @@ import { PrismaClient } from "../../prisma/generated/prisma/client";
 import bcrypt from "bcrypt";
 import { generateSlug } from "../common/generate_slug";
 import { generateNextCode } from "../utils/codeGenerator";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 const permissionData = [
   // User permissions

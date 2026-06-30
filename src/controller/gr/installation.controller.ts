@@ -5,12 +5,12 @@ import { PrismaClient } from "../../../prisma/generated/prisma/client";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { sendInstallationEmail } from "@utils/mail";
 import { getSafeString } from "@utils/paramHelper";
-const prisma = new PrismaClient();
 import { formatDate } from "@utils/formatDate";
 import { LogAction } from "@src/enum/enum";
 import { generateUniqueId } from "@utils/randomNumberGenerator";
 import * as dotenv from "dotenv";
 import { MailActions } from "@src/enum/enum";
+import prisma from "../../utils/prisma";
 dotenv.config();
 
 export const getInstallationList = async (

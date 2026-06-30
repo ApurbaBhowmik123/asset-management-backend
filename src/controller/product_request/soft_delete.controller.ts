@@ -1,12 +1,11 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { createLogReport } from "@utils/logReport";
 import { createLog } from "@src/helpers/createLog";
 import { createPagedResponse } from "@src/utils/pagedResponse";
 import { getSafeString } from "@utils/paramHelper";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const updateAssetStatus = async (
   req: Request,

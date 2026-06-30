@@ -5,12 +5,11 @@ import {
   Roles,
   TicketStatus,
 } from "@src/enum/enum";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { ErrorHandler } from "@src/utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
 import { successResponse } from "@src/utils/successResponse";
 import { getInventory } from "../gr/inventory.controller";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const getSummaryCardsData = async (
   req: Request,

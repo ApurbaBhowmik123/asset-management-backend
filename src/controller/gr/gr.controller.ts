@@ -1,7 +1,7 @@
 import { successResponse } from "@utils/successResponse";
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
-import { PrismaClient } from "../../../prisma/generated/prisma";
+
 import { createPagedResponse } from "@utils/pagedResponse";
 import { generateNextCode } from "@utils/codeGenerator";
 import { uploadFiles } from "@src/helpers/uploadFiles";
@@ -15,10 +15,11 @@ import { jsongenerateQRCode } from "@src/utils/jsonqrcodeGenerator";
 import { foundSuperAdminUnitAdmin } from "@src/utils/foundSuperAdminUnitAdmin";
 import { MailActions } from "@src/enum/enum";
 import { getSafeString, getSafeStringOrUndefined } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
 dotenv.config();
 
-const prisma = new PrismaClient();
+
 
 export const createGr = async (
   req: Request,

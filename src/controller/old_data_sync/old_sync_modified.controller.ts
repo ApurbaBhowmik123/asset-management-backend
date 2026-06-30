@@ -1,14 +1,13 @@
+import type * as ExcelJSType from "exceljs";
 import { successResponse } from "@utils/successResponse";
 import { Request, Response, NextFunction } from "express";
-import { ErrorHandler } from "@utils/ErrorHandler";
-import ExcelJS from "exceljs";
-import { PrismaClient } from "../../../prisma/generated/prisma";
+import { ErrorHandler } from "../../utils/ErrorHandler";
+import prisma from "../../utils/prisma";
 import { generateNextCode } from "@src/utils/codeGenerator";
 import { generateUniqueId } from "@utils/randomNumberGenerator";
 import { AssignedStatus, LogAction } from "@src/enum/enum";
 import { jsongenerateQRCode } from "@src/utils/jsonqrcodeGenerator";
 import { createLogReport } from "@utils/logReport";
-const prisma = new PrismaClient();
 
 interface AssetData {
   "User Name": string;
@@ -883,14 +882,15 @@ export const oldDataSync = async (
       return next(new ErrorHandler("No file uploaded", 400));
     }
 
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSModule = require("exceljs");
+    const workbook = new ExcelJSModule.Workbook();
     // @ts-ignore
     await workbook.xlsx.load(Buffer.from(req.file.buffer as Uint8Array));
 
     const worksheet = workbook.worksheets[0];
     const rows: any[] = [];
 
-    worksheet.eachRow({ includeEmpty: false }, (row) => {
+    worksheet.eachRow({ includeEmpty: false }, (row: any) => {
       const values = Array.isArray(row.values) ? row.values.slice(1) : [];
       rows.push(values);
     });
@@ -1268,7 +1268,8 @@ export const downloadSampleExcel = async (
       },
     ];
 
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSModule = require("exceljs");
+    const workbook = new ExcelJSModule.Workbook();
     const worksheet = workbook.addWorksheet("Sample Data");
     const columns = Object.keys(sampleData[0]).map((key) => ({
       header: key,

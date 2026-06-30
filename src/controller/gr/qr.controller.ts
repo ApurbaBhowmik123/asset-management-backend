@@ -3,8 +3,8 @@ import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { PrismaClient } from "../../../prisma/generated/prisma/client";
 import { createPagedResponse } from "@utils/pagedResponse";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 const cleanUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;

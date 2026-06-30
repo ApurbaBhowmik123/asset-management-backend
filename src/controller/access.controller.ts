@@ -1,10 +1,9 @@
 import { successResponse } from "../utils/successResponse";
 import { ErrorHandler } from "../utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../prisma/generated/prisma";
 import { connect } from "http2";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getMyAccess = async (
   req: Request,

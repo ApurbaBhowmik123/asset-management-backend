@@ -1,8 +1,7 @@
 import { successResponse } from "@utils/successResponse";
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
-import { PrismaClient } from "../../../prisma/generated/prisma";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const notificationCount = async (
   req: Request,

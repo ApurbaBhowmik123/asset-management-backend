@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { PrismaClient } from "../../../prisma/generated/prisma/client";
 import { getSafeString } from "@utils/paramHelper";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const getCategories = async (
   req: Request,

@@ -4,8 +4,8 @@ import { ErrorHandler } from "@utils/ErrorHandler";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { PrismaClient } from "../../../prisma/generated/prisma/client";
 import { generateNextCode } from "@utils/codeGenerator";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getAllCategories = async (
   req: Request,

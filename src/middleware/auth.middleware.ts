@@ -3,11 +3,10 @@ import { ErrorHandler } from "../utils/ErrorHandler";
 import { isBlacklisted } from "../utils/tokenBlackList";
 import jwt from "jsonwebtoken";
 import * as dotenv from "dotenv";
-import { PrismaClient } from "../../prisma/generated/prisma";
+import prisma from "../utils/prisma";
 
 dotenv.config();
 
-const prisma = new PrismaClient();
 
 export const authCheck = async (
   req: Request,

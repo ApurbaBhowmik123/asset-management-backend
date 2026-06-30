@@ -500,6 +500,7 @@ model GRInventoryProduct {
   grDetailsId          Int
   productId            Int?
   categoryId           Int?
+    softwareId           Int?
   brandId              Int?
   quantity             Int
   ratePerPiece         Float
@@ -528,6 +529,7 @@ model GRInventoryProduct {
   product          Product?                 @relation("ProductToInventoryProducts", fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   category         Category?                @relation("CategoryToInventoryProducts", fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   brand            Brand?                   @relation("BrandToInventoryProducts", fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  software         SoftWare?                @relation("SoftwareToInventoryProducts", fields: [softwareId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdUser      User                     @relation("GRInventoryProductCreatedBy", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   updatedUser      User                     @relation("GRInventoryProductUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   inventoryDetails InventoryProductDetail[] @relation("InventoryProductDetailToGRInventoryProduct")
@@ -1129,6 +1131,7 @@ model SoftWare {
   updatedUser         User?                @relation("SoftwareUpdatedBy", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
   softwareLogs        SoftWareLog[]
   softwareAssignments SoftWareAssignment[] @relation("softwareDetails")
+  inventoryProducts GRInventoryProduct[] @relation("SoftwareToInventoryProducts")
 
   @@map("softwares")
 }

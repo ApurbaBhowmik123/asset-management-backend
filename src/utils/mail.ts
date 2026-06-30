@@ -6,8 +6,7 @@ import { ErrorHandler } from "./ErrorHandler";
 import { sendCreateGrEmail } from "../emails/create-gr.template";
 import { installationEmail } from "../emails/installation.template";
 import { handoverAssetMail } from "../emails/handover.template";
-import { PrismaClient } from "../../prisma/generated/prisma";
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma";
 dotenv.config();
 
 const transport = nodemailer.createTransport({

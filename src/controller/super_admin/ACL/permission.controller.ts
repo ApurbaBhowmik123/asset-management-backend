@@ -1,10 +1,9 @@
 import { successResponse } from "../../../utils/successResponse";
 import { ErrorHandler } from "../../../utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../../prisma/generated/prisma";
 import { generateSlug } from "../../../common/generate_slug";
 import { createPagedResponse } from "../../../utils/pagedResponse";
-const prisma = new PrismaClient();
+import prisma from "../../../utils/prisma";
 
 export const getAllPermissions = async (
   req: Request,

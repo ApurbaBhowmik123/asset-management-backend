@@ -2,12 +2,11 @@ import { successResponse } from "@utils/successResponse";
 import { createAndSendToken } from "@src/shared/auth";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { generateNextCode } from "@utils/codeGenerator";
 import bcrypt from "bcrypt";
 import ldap from "ldapjs";
 import * as dotenv from "dotenv";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 type LdapUserInfo = {
   company: string | null;
   displayName: string | null;

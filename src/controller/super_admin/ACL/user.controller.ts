@@ -1,13 +1,12 @@
 import { successResponse } from "../../../utils/successResponse";
 import { ErrorHandler } from "../../../utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../../prisma/generated/prisma";
 import { createPagedResponse } from "../../../utils/pagedResponse";
 import bcrypt from "bcrypt";
 import { generateNextCode } from "@src/utils/codeGenerator";
 import { Roles } from "@src/enum/enum";
+import prisma from "../../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const getAllUsers = async (
   req: Request,

@@ -1,13 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { generateNextCode } from "@utils/codeGenerator";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { uploadFiles } from "@src/helpers/uploadFiles";
 import * as dotenv from "dotenv";
+import prisma from "../../utils/prisma";
 dotenv.config();
-const prisma = new PrismaClient();
 
 export const getLocations = async (
   req: Request,

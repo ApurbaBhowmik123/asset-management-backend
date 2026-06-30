@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { ErrorHandler } from "../utils/ErrorHandler";
 import { createAndSendToken } from "../shared/auth";
-import { PrismaClient } from "../../prisma/generated/prisma";
 import * as bcrypt from "bcrypt";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export const login = async (
   req: Request,

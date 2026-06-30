@@ -1,4 +1,3 @@
-import { PrismaClient } from "../../prisma/generated/prisma";
 interface softwareLog {
   softwareId: number;
   userId: number;
@@ -6,10 +5,10 @@ interface softwareLog {
   actionDetails: string;
 }
 import { generateUniqueId } from "./randomNumberGenerator";
+import prisma from "../utils/prisma";
 
 export const createSoftwareLog = (log: softwareLog) => {
-  const prisma = new PrismaClient();
-  return prisma.softWareLog.create({
+    return prisma.softWareLog.create({
     data: {
       uuid: generateUniqueId(),
       softwareId: log.softwareId,

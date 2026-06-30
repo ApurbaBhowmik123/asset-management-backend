@@ -5,8 +5,8 @@ import { PrismaClient } from "../../../prisma/generated/prisma/client";
 import { generateNextCode } from "@utils/codeGenerator";
 import { createPagedResponse } from "@src/utils/pagedResponse";
 import { getSafeString } from "@utils/paramHelper";
+import prisma from "../../utils/prisma";
 
-const prisma = new PrismaClient();
 
 export interface option {
   value: string;

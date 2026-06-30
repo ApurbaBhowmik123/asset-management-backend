@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma } from "../../prisma/generated/prisma";
 import { LogAction } from "@src/enum/enum";
+import prisma from "../utils/prisma";
 
-const prisma = new PrismaClient();
 
 interface LogData {
   action: any;

@@ -1,11 +1,10 @@
 import { successResponse } from "@utils/successResponse";
 import { ErrorHandler } from "@utils/ErrorHandler";
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "../../../prisma/generated/prisma";
 import { generateNextCode } from "@utils/codeGenerator";
 import { createPagedResponse } from "@utils/pagedResponse";
 import { getSafeString } from "@utils/paramHelper";
-const prisma = new PrismaClient();
+import prisma from "../../utils/prisma";
 
 export const createInstallation = async (
   req: Request,
