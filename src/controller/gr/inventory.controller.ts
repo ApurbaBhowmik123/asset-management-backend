@@ -183,6 +183,8 @@ export const getInventory = async (
           },
           grInventoryProduct: {
             include: {
+              brand: true,
+              category: true,
               product: {
                 include: {
                   brand: true,
@@ -278,6 +280,8 @@ export const getInventory = async (
           },
           grInventoryProduct: {
             include: {
+              brand: true,
+              category: true,
               product: {
                 include: {
                   brand: true,
@@ -632,18 +636,20 @@ export const getInventoryByStatus = async (
     if (filterBrand) {
       whereCondition.AND.push({
         grInventoryProduct: {
-          product: {
-            brandId: filterBrand,
-          },
+          OR: [
+            { product: { brandId: filterBrand } },
+            { brandId: filterBrand },
+          ]
         },
       });
     }
     if (filterCategory) {
       whereCondition.AND.push({
         grInventoryProduct: {
-          product: {
-            categoryId: filterCategory,
-          },
+          OR: [
+            { product: { categoryId: filterCategory } },
+            { categoryId: filterCategory },
+          ]
         },
       });
     }
@@ -656,21 +662,19 @@ export const getInventoryByStatus = async (
           { assignedStatus: { equals: search as any } },
           {
             grInventoryProduct: {
-              product: {
-                OR: [
-                  { name: { contains: search } },
-                  {
-                    brand: {
-                      name: { contains: search },
-                    },
+              OR: [
+                {
+                  product: {
+                    OR: [
+                      { name: { contains: search } },
+                      { brand: { name: { contains: search } } },
+                      { category: { name: { contains: search } } },
+                    ],
                   },
-                  {
-                    category: {
-                      name: { contains: search },
-                    },
-                  },
-                ],
-              },
+                },
+                { brand: { name: { contains: search } } },
+                { category: { name: { contains: search } } },
+              ]
             },
           },
           {
@@ -714,7 +718,7 @@ export const getInventoryByStatus = async (
       whereCondition.OR = [
         {
           assignedStatus: {
-            notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
+            notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF],
           },
         },
       ];
@@ -844,6 +848,8 @@ export const getInventoryByStatus = async (
                   sapId: true,
                 },
               },
+              brand: true,
+              category: true,
               product: {
                 include: {
                   brand: true,
@@ -959,6 +965,8 @@ export const getInventoryByStatus = async (
                   sapId: true,
                 },
               },
+              brand: true,
+              category: true,
               product: {
                 include: {
                   brand: true,
@@ -1070,7 +1078,7 @@ export const allAsset = async (
     const whereClause: any = {
       status: true,
       assignedStatus: {
-        notIn: [AssignedStatus.E_WASTE, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
+        notIn: [AssignedStatus.E_WASTE, AssignedStatus.WRITE_OFF],
       },
     };
 
@@ -1184,7 +1192,7 @@ export const allAsset = async (
         whereClause.OR = [
           {
             assignedStatus: {
-              notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
+              notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF],
             },
           },
         ];
@@ -1590,6 +1598,8 @@ export const allAsset = async (
           },
           grInventoryProduct: {
             include: {
+              brand: true,
+              category: true,
               product: {
                 include: {
                   brand: true,
@@ -1706,6 +1716,8 @@ export const allAsset = async (
           },
           grInventoryProduct: {
             include: {
+              brand: true,
+              category: true,
               product: {
                 include: {
                   brand: true,
@@ -1801,7 +1813,7 @@ export const getInventorySummary = async (
     const whereClause: any = {
       status: true,
       assignedStatus: {
-        notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF, "Untagged", AssignedStatus.SCRAP],
+        notIn: [AssignedStatus.E_WASTE, AssignedStatus.BLOCKED, AssignedStatus.ASSIGNED, AssignedStatus.WRITE_OFF],
       },
       AND: [],
     };

@@ -16,5 +16,7 @@
       "@middlewares/*": ["./src/middleware/*"],
       "@validators/*": ["./src/validator/*"]
     }
-  }
+  },
+  "include": ["src/**/*", "express.d.ts"],
+  "exclude": ["node_modules", "dist", "prisma", "**/*.test.ts"]
 }

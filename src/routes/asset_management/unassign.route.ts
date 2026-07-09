@@ -7,6 +7,8 @@ import {
 import { hasPermission } from "@middlewares/permission.middleware";
 import { unassignAssetValidator } from "@validators/asset/unassign.validator";
 import { validate } from "@middlewares/validate.midlleware";
+import { upload } from "@src/utils/multer";
+import { parseJsonFields } from "@middlewares/parsedJSON.middleware";
 
 export const unassignRouter = Router();
 
@@ -21,6 +23,8 @@ unassignRouter.get(
 unassignRouter.post(
   "/",
   hasPermission("unassign-asset"),
+  upload.single("file"),
+  parseJsonFields(["inventoryProductIds", "assignmentIds", "conditions"]),
   unassignAssetValidator,
   validate,
   unassignAsset

@@ -52,6 +52,7 @@ export const getSummaryCardsData = async (
               AssignedStatus.BLOCKED,
               AssignedStatus.ASSIGNED,
               AssignedStatus.WRITE_OFF,
+              AssignedStatus.SCRAP,
             ],
           },
         
@@ -1004,5 +1005,153 @@ export const getReopenTicketsByPriority = async (
       return next(new ErrorHandler(error.message, 500));
     }
     return next(new ErrorHandler("An unexpected error occurred", 500));
+  }
+};
+
+
+export const getDashboardAnalytics = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const depreciationPeriodParam = req.query.depreciationPeriod as string;
+    let depreciationYears = 3; // default
+    if (depreciationPeriodParam === "today" || depreciationPeriodParam === "0") {
+      depreciationYears = 0;
+    } else if (depreciationPeriodParam) {
+      const parsed = parseInt(depreciationPeriodParam);
+      if (!isNaN(parsed)) depreciationYears = parsed;
+    }
+
+    const userId = parseInt(req.user?.id ?? "0");
+    if (isNaN(userId)) {
+      return next(new ErrorHandler("Invalid user ID", 400));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId, status: true },
+      include: { roles: true },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler("You have no permission to access this resource", 404));
+    }
+
+    const isSuperAdmin = user.roles.some((role) => role.name === "Super Admin");
+    const unitFilter = isSuperAdmin ? {} : { unitId: user.unitId };
+
+    const rawAssets = await prisma.inventoryProductDetail.findMany({
+      where: { status: true, ...unitFilter },
+      include: {
+        grInventoryProduct: {
+          include: { 
+            category: true,
+            product: { include: { category: true } } 
+          }
+        },
+        location: true,
+        unit: true
+      }
+    });
+
+    const productMap = new Map();
+    const categoryMap = new Map();
+    const statusMap = new Map();
+    const locationMap = new Map();
+
+    for (const asset of rawAssets) {
+      // 1 & 4. Asset Summary by Category & Top 5 By Category
+      const cName = asset.grInventoryProduct?.category?.name || asset.grInventoryProduct?.product?.category?.name || "Unknown Category";
+      const price = asset.grInventoryProduct?.ratePerPiece || 0;
+      const createdAt = asset.grInventoryProduct?.createdAt || asset.createdAt;
+      const ageInMs = new Date().getTime() - new Date(createdAt).getTime();
+      const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25);
+      
+      const lifespan = 3; // Fixed 3 years lifespan as per requirement
+      let effectiveAge = ageInYears; // 'Today' uses actual age
+      
+      if (depreciationYears > 0) {
+        // If dropdown is 1, 2, 3... use it as the effective age for calculation
+        effectiveAge = depreciationYears;
+      }
+      
+      let depreciatedPrice = price;
+      if (effectiveAge >= lifespan) {
+        depreciatedPrice = 0;
+      } else if (effectiveAge > 0) {
+        depreciatedPrice = price - (price * (effectiveAge / lifespan));
+      }
+      
+      if (!categoryMap.has(cName)) {
+        categoryMap.set(cName, { name: cName, count: 0, value: 0, depreciatedValue: 0 });
+      }
+      const cEntry = categoryMap.get(cName);
+      cEntry.count += 1;
+      cEntry.value += price;
+      cEntry.depreciatedValue += depreciatedPrice;
+
+      // 2. Asset Status
+      let st = asset.assignedStatus || "Unknown";
+      if (["Untagged", "InstallationCompleted", "PENDING_RETURN"].includes(st)) {
+          st = "InStock"; // Group these under Instock for the pie chart to match the Top Card logic
+      }
+      statusMap.set(st, (statusMap.get(st) || 0) + 1);
+
+      // 3. Assets By Location
+      const locName = asset.location?.name || asset.unit?.name || "Unassigned Location";
+      if (!locationMap.has(locName)) {
+        locationMap.set(locName, { locationName: locName, totalAsset: 0, allocated: 0, instock: 0 });
+      }
+      const lEntry = locationMap.get(locName);
+      lEntry.totalAsset += 1;
+      const normSt = st.toLowerCase();
+      if (normSt === "assigned" || normSt === "handovered" || normSt === "handover") {
+        lEntry.allocated += 1;
+      }
+      if (normSt === "instock" || normSt === "in-stock" || normSt === "in_stock") {
+        lEntry.instock += 1;
+      }
+    }
+
+    const assetSummaryByCategory = Array.from(categoryMap.values());
+    const top5AssetsByValue = Array.from(categoryMap.values()).sort((a, b) => b.value - a.value).slice(0, 5);
+    const assetStatus = Array.from(statusMap.entries()).map(([name, value]) => ({ name, value }));
+    const assetsByLocation = Array.from(locationMap.values());
+
+    // 5. Recent Activities
+    const recentActivities = await prisma.logReport.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
+        createdByUser: { select: { name: true } },
+      }
+    });
+
+    const formattedActivities = recentActivities.map(log => ({
+      id: log.id,
+      transactionType: log.transactionType,
+      transactionDate: log.transactionDate,
+      details: log.logReportDetails,
+      createdBy: log.createdByUser?.name || "System"
+    }));
+
+    return successResponse(
+      res,
+      200,
+      "Dashboard Analytics fetched successfully",
+      {
+        assetSummaryByCategory,
+        assetStatus,
+        assetsByLocation,
+        top5AssetsByValue,
+        recentActivities: formattedActivities
+      },
+      null
+    );
+
+  } catch (error) {
+    console.error("Error in getDashboardAnalytics:", error);
+    return next(new ErrorHandler("Internal Server Error", 500));
   }
 };

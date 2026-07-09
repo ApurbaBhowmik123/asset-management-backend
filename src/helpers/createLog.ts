@@ -27,7 +27,7 @@ export const createLog = async ({
         userId,
         relatedModelType: relatedModelType ?? null,
         relatedModelId: relatedModelId ?? null,
-        details: JSON.stringify(details) ?? Prisma.JsonNull, 
+        details: details ? JSON.stringify(details) : null,
         actionUrl: actionUrl ?? null,
       },
     });

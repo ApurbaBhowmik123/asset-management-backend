@@ -11,7 +11,7 @@ export const oldSyncRouter = Router();
 oldSyncRouter.post(
   "/old-data-sync",
   authCheck,
-  hasPermission("old-data-sync-module"),
+  hasPermission("create-inventory"),
   upload.single("file"),
   oldDataSync
 );
@@ -20,13 +20,13 @@ const assetImportService = new AssetImportService();
 oldSyncRouter.post(
   "/old-data-import",
   authCheck,
-  hasPermission("old-data-sync-module"),
+  hasPermission("create-inventory"),
   (req, res) => assetImportService.bulkImportAssets(req, res)
 );
 
 oldSyncRouter.get(
   "/download-sample-excel",
   authCheck,
-  hasPermission("old-data-sync-module"),
+  hasPermission("create-inventory"),
   downloadSampleExcel
 );

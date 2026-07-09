@@ -103,10 +103,15 @@ export const getCategoryById = async (
 ) => {
   try {
     const { id } = req.params;
+    const categoryId = Number(id);
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      return next(new ErrorHandler("Valid category id is required", 400));
+    }
 
     // Fetch category by ID
     const category = await prisma.category.findUnique({
-      where: { id: Number(id) },
+      where: { id: categoryId },
       include: {
         createdUser: {
           select: {

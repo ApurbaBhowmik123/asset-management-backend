@@ -9,10 +9,11 @@ import {
     getReopenTicketsByPriority,
     getSummaryCardsData,
     getTotalProductSummary,
-    topTenUsedAndUnusedProducts
+    topTenUsedAndUnusedProducts,
+    getDashboardAnalytics
 } from "@controllers/dashboard/dashboard.controller";
-
 import { authCheck } from "@middlewares/auth.middleware";
+
 
 export const dashboardRouter = Router();
 
@@ -29,3 +30,6 @@ dashboardRouter.get("/reopen-tickets-by-priority", getReopenTicketsByPriority)
 
 
 
+
+
+dashboardRouter.get("/analytics", getDashboardAnalytics);

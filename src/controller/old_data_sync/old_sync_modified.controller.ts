@@ -60,6 +60,57 @@ interface ImportResult {
   error?: string;
 }
 
+const getFirstPresentValue = (
+  row: Record<string, unknown>,
+  keys: string[]
+): unknown => {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return value;
+    }
+  }
+  return undefined;
+};
+
+const setMappedValue = (
+  row: Record<string, unknown>,
+  targetKey: string,
+  sourceKeys: string[],
+  fallback?: unknown
+) => {
+  if (row[targetKey] !== undefined && row[targetKey] !== null && String(row[targetKey]).trim() !== "") {
+    return;
+  }
+
+  const value = getFirstPresentValue(row, sourceKeys);
+  row[targetKey] = value !== undefined ? value : fallback;
+};
+
+const normalizeUploadedAssetRow = (asset: Record<string, unknown>) => {
+  const row = { ...asset };
+
+  setMappedValue(row, "Model", ["Model Name", "Model Number", "Product"], "Unknown");
+  setMappedValue(row, "Make", ["Brand"], "Unknown");
+  setMappedValue(row, "Asset Type", ["Category"], "Unknown");
+  setMappedValue(row, "Serial Number", ["Serial No 1", "Serial No"], "");
+  setMappedValue(row, "Serial Number.1", ["Serial No 2", "Serial Number 2"], "");
+  setMappedValue(row, "SAP Code", ["Sap Code", "SAP code"], "");
+  setMappedValue(row, "PO Number", ["Invoice Number", "Invoice Nu", "Invoice No", "PO Number"], "INV-DEFAULT");
+  setMappedValue(row, "PO Value", ["Rate Per Piece", "Rate Per P", "Rate"], 0);
+  setMappedValue(row, "Warranty Expiry Date", ["Warranty Till", "Warranty Till (YYYY-MM-DD)", "Warranty", "Warranty T"], "");
+  setMappedValue(row, "Lifecycle Expiry Date", ["Lifecycle Expiry", "Lifecycle Expiry (YYYY-MM-DD)", "Lifecycle", "Lifecycle E"], "");
+  setMappedValue(row, "Maintenance Due Date", ["Maintenance Due Date", "Maintenance Due (YYYY-MM-DD)", "Maintenance", "Maintenan"], "");
+  setMappedValue(row, "Important Link", ["Important Link", "Important", "Link"], "");
+  
+  // Set default acquisition date if missing to bypass validation errors for their template
+  if (!row["Acquisition Date (PO)"]) {
+    row["Acquisition Date (PO)"] = row["Invoice Date"] || new Date().toISOString().split('T')[0];
+  }
+
+  return row;
+};
+
 export class AssetImportService {
   private readonly specFieldMap: Record<string, number> = {
     "CPU Core Count": 4,
@@ -115,7 +166,7 @@ export class AssetImportService {
     data: AssetData,
     userId: number
   ): Promise<number> {
-    const modelName = data.Model.trim();
+    const modelName = data.Model?.trim() || '';
 
     // Check if product exists (case insensitive)
     const existingProduct = await prisma.product.findFirst({
@@ -134,7 +185,7 @@ export class AssetImportService {
     const brandId = await this.createOrFindBrand(data.Make, userId);
 
     // Get IT Assets category
-    const itAssetsCategory = await prisma.category.findFirst({
+    let itAssetsCategory = await prisma.category.findFirst({
       where: {
         name: {
           equals: "IT Assets",
@@ -143,11 +194,19 @@ export class AssetImportService {
     });
 
     if (!itAssetsCategory) {
-      throw new Error("IT Assets category not found");
+      const catUuid = await generateNextCode(prisma.category, "uuid", "CAT-");
+      itAssetsCategory = await prisma.category.create({
+        data: {
+          name: "IT Assets",
+          uuid: catUuid,
+          createdBy: userId,
+          updatedBy: userId
+        }
+      });
     }
 
     // Create or find subcategory
-    
+
 
     // Create new product
     const uuid = await generateNextCode(prisma.product, "uuid", "PROD-");
@@ -156,7 +215,7 @@ export class AssetImportService {
         uuid,
         brandId,
         categoryId: itAssetsCategory.id,
-                name: modelName,
+        name: modelName,
         description: data.Description,
         serialNo: data["Serial Number"],
         createdBy: userId,
@@ -234,18 +293,39 @@ export class AssetImportService {
     });
 
     if (existing) {
+      if (!existing.grId) {
+        const fallbackGrId = existing.uuid || `GR-${existing.id}`;
+        await prisma.gRDetail.update({
+          where: { id: existing.id },
+          data: { grId: fallbackGrId },
+        });
+      }
       return existing.id;
     }
     const location = await this.createOrFindLocation(data, userId);
     const acquisitionDate =
       this.parseDate(data["Acquisition Date (PO)"]) || new Date();
-    const uuid = await generateNextCode(prisma.gRDetail, "uuid", "GR-");
+    const generatedUuid = await generateNextCode(prisma.gRDetail, "uuid", "GR-");
+    const rawData = data as unknown as Record<string, unknown>;
+    const fallbackGrId = String(
+      ["GR Number", "GR No", "GR ID", "GR Id"]
+        .map((key) => rawData[key])
+        .find((value) => value !== undefined && value !== null && String(value).trim()) ||
+      generatedUuid
+    );
+    const invoiceNumber = String(
+      ["Invoice Number", "Invoice No"]
+        .map((key) => rawData[key])
+        .find((value) => value !== undefined && value !== null && String(value).trim()) || ""
+    );
     const grDetail = await prisma.gRDetail.create({
       data: {
-        uuid,
+        uuid: generatedUuid,
         sapId: data["PO Number"],
         sapDate: acquisitionDate,
         grDate: acquisitionDate,
+        grId: fallbackGrId,
+        invoiceNumber: invoiceNumber || null,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -261,10 +341,21 @@ export class AssetImportService {
     data: AssetData,
     userId: number
   ): Promise<number> {
-    const quantity = 1; // Default quantity
+    const rawData = data as unknown as Record<string, unknown>;
+    const quantity = Number(rawData.Quantity || rawData.Qty || 1) || 1;
     const ratePerPiece = data["PO Value"] || 0;
     const totalAmount = Number(ratePerPiece) * quantity;
-    const warrantyDate = this.parseDate(data["Warranty Expiry Date"]);
+    const warrantyDate = this.parseDate(
+      String(
+        rawData["Warranty Expiry Date"] ||
+        rawData["Warranty Till"] ||
+        rawData["Warranty Till (YYYY-MM-DD)"] ||
+        rawData["Warranty/AMC"] ||
+        rawData["Warranty Date"] ||
+        rawData["Warranty Expiry"] ||
+        ""
+      )
+    );
     const uuid = await generateNextCode(
       prisma.gRInventoryProduct,
       "uuid",
@@ -273,12 +364,14 @@ export class AssetImportService {
     const now = new Date();
 
     const acquisitionDate = this.parseDate(data["Acquisition Date (PO)"]);
-    const maintenanceDueDate = new Date(
-      (acquisitionDate ? acquisitionDate : now).setMonth(now.getMonth() + 3) // Default to 3 months if frequency is invalid
-    );
-    const lifecycleExDate = new Date(
-      (acquisitionDate ? acquisitionDate : now).setMonth(now.getMonth() + 48) // Default to 4 years if frequency is invalid
-    );
+    const maintenanceDueDate =
+      this.parseDate(rawData["Maintenance Due Date"]) ||
+      this.parseDate(rawData["Maintenance Due (YYYY-MM-DD)"]) ||
+      this.addMonths(acquisitionDate || now, 3);
+    const lifecycleExDate =
+      this.parseDate(rawData["Lifecycle Expiry Date"]) ||
+      this.parseDate(rawData["Lifecycle Expiry (YYYY-MM-DD)"]) ||
+      this.addMonths(acquisitionDate || now, 48);
     const grInventoryProduct = await prisma.gRInventoryProduct.create({
       data: {
         uuid,
@@ -300,13 +393,79 @@ export class AssetImportService {
   }
 
   // Step 4: Create Inventory Product Detail
+  private getDetailValue(
+    data: AssetData | Record<string, unknown>,
+    detailIndex: number,
+    candidateKeys: string[]
+  ): string | null {
+    const rawData = data as Record<string, unknown>;
+
+    // 1. Check for specific indexed column names based on detailIndex
+    // e.g. for candidate "Serial No 1", it becomes "Serial No {detailIndex + 1}"
+    const targetSuffix = String(detailIndex + 1);
+    
+    for (const key of candidateKeys) {
+      // For the first item, prioritize the exact candidate key if it's present
+      if (detailIndex === 0 && rawData[key] !== undefined && rawData[key] !== null && String(rawData[key]).trim() !== "") {
+          return String(rawData[key]).trim();
+      }
+
+      // Strip existing trailing numbers to form the base key, then append the target index
+      const baseKey = key.replace(/\s*\d+$/, "").trim();
+      const possibleIndexedKeys = [
+        `${baseKey} ${targetSuffix}`,
+        `${baseKey}${targetSuffix}`,
+        `${baseKey}_${targetSuffix}`
+      ];
+
+      // Also allow the base key itself without a suffix for the first item
+      if (detailIndex === 0) {
+          possibleIndexedKeys.push(baseKey);
+      }
+
+      for (const indexedKey of possibleIndexedKeys) {
+        const value = rawData[indexedKey];
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+          return String(value).trim();
+        }
+      }
+    }
+
+    // 2. Fallback to extracting from comma/semicolon/pipe separated values
+    const parsedValues: string[] = [];
+
+    for (const key of candidateKeys) {
+      const value = rawData[key];
+      if (typeof value === "string") {
+        const parts = value
+          .split(/[;,|]/)
+          .map((part) => part.trim())
+          .filter(Boolean);
+        if (parts.length > 0) {
+          parsedValues.push(...parts);
+          break;
+        }
+      } else if (typeof value === "number") {
+        parsedValues.push(String(value));
+        break;
+      } else if (value instanceof Date) {
+        parsedValues.push(value.toISOString());
+        break;
+      }
+    }
+
+    if (parsedValues.length === 0) return null;
+    return parsedValues[Math.min(detailIndex, parsedValues.length - 1)] || null;
+  }
+
   private async createInventoryProductDetail(
     grInventoryProductId: number,
     data: AssetData,
     userId: number,
     grDetailId: number,
     unitId?: number,
-    location?: any
+    location?: any,
+    detailIndex: number = 0
   ): Promise<number> {
     const isUsed =
       data["Asset State"]?.toLowerCase().includes("in use") || false;
@@ -342,23 +501,36 @@ export class AssetImportService {
       `${unitav}-${locationav}-${subcategoryav}-`,
       4
     );
+    const rawAssetTag = String(data["Asset Tag"] || "").trim();
+    const rawData = data as unknown as Record<string, unknown>;
+    const inventoryDetailUuid =
+      rawAssetTag && detailIndex === 0
+        ? rawAssetTag
+        : rawAssetTag
+          ? `${rawAssetTag}-${detailIndex + 1}`
+          : uuid;
     const now = new Date();
 
     const acquisitionDate = this.parseDate(data["Acquisition Date (PO)"]);
-    const maintenanceDueDate = new Date(
-      (acquisitionDate ? acquisitionDate : now).setMonth(now.getMonth() + 3) // Default to 3 months if frequency is invalid
-    );
-    const lifecycleExDate = new Date(
-      (acquisitionDate ? acquisitionDate : now).setMonth(now.getMonth() + 48) // Default to 4 years if frequency is invalid
-    );
+    const maintenanceDueDate =
+      this.parseDate(rawData["Maintenance Due Date"]) ||
+      this.parseDate(rawData["Maintenance Due (YYYY-MM-DD)"]) ||
+      this.addMonths(acquisitionDate || now, 3);
+    const lifecycleExDate =
+      this.parseDate(rawData["Lifecycle Expiry Date"]) ||
+      this.parseDate(rawData["Lifecycle Expiry (YYYY-MM-DD)"]) ||
+      this.addMonths(acquisitionDate || now, 48);
     const inventoryDetail = await prisma.inventoryProductDetail.create({
       data: {
-        uuid: data["Asset Tag"] ?? uuid,
+        uuid: inventoryDetailUuid,
         grInventoryProductId,
-        serialNo1: data["Serial Number"],
-        sapCode: data["SAP Code"].toString(),
+        serialNo1: this.getDetailValue(data, detailIndex, ["Serial Number", "Serial No 1", "Serial No"]) || null,
+        serialNo2: this.getDetailValue(data, detailIndex, ["Secondary Serial Number", "MAC Address", "Alt Serial No"]) || null,
+        sapCode: this.getDetailValue(data, detailIndex, ["SAP Code", "SAP Code.1", "SAP Code 2", "Sap Code"]) || null,
+        modelName: this.getDetailValue(data, detailIndex, ["Model", "Model Name", "Model Name 1", "Model Number", "Product"]) || null,
         isUsed,
-        assignedStatus: isUsed ? "Assigned" : "InStock",
+        assignedStatus: "Untagged",
+        installationStatus: true,
         createdBy: userId,
         locationId: location ? location.id : null,
         updatedBy: userId,
@@ -397,7 +569,7 @@ export class AssetImportService {
             product: {
               select: {
                 name: true,
-                
+
               },
             },
           },
@@ -454,28 +626,46 @@ export class AssetImportService {
     data: AssetData,
     userId: number
   ): Promise<void> {
+    const rawData = data as unknown as Record<string, unknown>;
     const specMappings: Record<string, string | undefined> = {
       "CPU Core Count": data["CPU Core Count"],
       "CPU Speed(GHz)": data["CPU Speed(GHz)"],
-      "Disk Space": data["Disk Space(GB)"],
+      "Disk Space(GB)": data["Disk Space(GB)"],
       Memory: data["Memory"],
+      RAM: typeof rawData.RAM === "string" ? rawData.RAM : undefined,
+      Processor: typeof rawData.Processor === "string" ? rawData.Processor : undefined,
+      SSD: typeof rawData.SSD === "string" ? rawData.SSD : undefined,
+      "Graphics Card": typeof rawData["Graphics Card"] === "string" ? String(rawData["Graphics Card"]) : undefined,
     };
 
     const validEntries = Object.entries(specMappings).filter(
-      ([_, value]) => value && value.trim()
+      ([_, value]) => typeof value === "string" && value.trim()
     );
     const specPromises: any[] = [];
     for (const [field, value] of validEntries) {
-      const specFieldId = this.specFieldMap[field];
-      if (!specFieldId) continue;
+      let specField = await prisma.specField.findFirst({
+        where: { name: { equals: field } },
+      });
+
+      if (!specField) {
+        const specUuid = await generateNextCode(prisma.specField, "uuid", "SPEC-");
+        specField = await prisma.specField.create({
+          data: {
+            uuid: specUuid,
+            name: field,
+            fieldType: "TEXT",
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+      }
 
       const uuid = generateUniqueId();
-
       const specvalue = await prisma.gRProductSpecValue.create({
         data: {
           uuid,
           grInventoryProductDetailId: inventoryDetailId,
-          specFieldId,
+          specFieldId: specField.id,
           value: value!.trim(),
           createdBy: userId,
           updatedBy: userId,
@@ -530,12 +720,9 @@ export class AssetImportService {
       installedRecords.push(record);
     }
 
-    // Update product status
-    const product = await prisma.inventoryProductDetail.update({
+    // Fetch product to get uuid for logging
+    const product = await prisma.inventoryProductDetail.findUnique({
       where: { id: inventoryDetailId },
-      data: {
-        assignedStatus: AssignedStatus.InstallationCompleted,
-      },
     });
 
     // Create log
@@ -576,13 +763,13 @@ export class AssetImportService {
     // If email is embedded in a rich object (e.g., Excel, Notion export), extract the `text`
     const userEmail =
       typeof rawEmail === "object" &&
-      rawEmail !== null &&
-      "text" in rawEmail &&
-      typeof (rawEmail as { text?: unknown }).text === "string"
+        rawEmail !== null &&
+        "text" in rawEmail &&
+        typeof (rawEmail as { text?: unknown }).text === "string"
         ? (rawEmail as { text: string }).text.trim().toLowerCase()
         : String(rawEmail || "")
-            .trim()
-            .toLowerCase();
+          .trim()
+          .toLowerCase();
 
     if (!userEmail) return null;
 
@@ -632,13 +819,11 @@ export class AssetImportService {
       where: { id: userId },
     });
 
-    const logDetails = `Assigned Product to ${user?.name || "N/A"} issued By ${
-      assignmentCreatedBy?.name || "N/A"
-    }`;
+    const logDetails = `Assigned Product to ${user?.name || "N/A"} issued By ${assignmentCreatedBy?.name || "N/A"
+      }`;
     const updatedInventory = await prisma.inventoryProductDetail.update({
       where: { id: inventoryDetailId },
       data: {
-        assignedStatus: AssignedStatus.ASSIGNED,
         isUsed: true,
       },
     });
@@ -658,22 +843,34 @@ export class AssetImportService {
   //Have to create log
 
   // Utility function to parse dates
-  private parseDate(dateString: string): Date | null {
+  private addMonths(dateValue: Date, months: number): Date {
+    const date = new Date(dateValue);
+    date.setMonth(date.getMonth() + months);
+    return date;
+  }
+
+  private parseDate(dateString: unknown): Date | null {
     if (!dateString) return null;
+    if (dateString instanceof Date) {
+      return isNaN(dateString.getTime()) ? null : dateString;
+    }
+
+    const normalizedDate = String(dateString).trim();
+    if (!normalizedDate) return null;
 
     try {
       // Handle DD/MM/YYYY format
-      const parts = dateString.split("/");
+      const parts = normalizedDate.split("/");
       if (parts.length === 3) {
         const [day, month, year] = parts;
         return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       }
 
       // Fallback to default Date parsing
-      const date = new Date(dateString);
+      const date = new Date(normalizedDate);
       return isNaN(date.getTime()) ? null : date;
     } catch (error) {
-      console.warn(`Invalid date format: ${dateString}`);
+      console.warn(`Invalid date format: ${normalizedDate}`);
       return null;
     }
   }
@@ -762,69 +959,108 @@ export class AssetImportService {
   // Main import function
   async importAsset(data: AssetData, userId: number): Promise<ImportResult> {
     try {
-      return await prisma.$transaction(async (tx) => {
-        // Step 1: Create or find product
-        const productId = await this.createOrFindProduct(data, userId);
-
-        // Step 2: Create or find GR Detail
-        const grDetailId = await this.createOrFindGRDetail(data, userId);
-
-        // Step 3: Create GR Inventory Product
-        const inventoryProductId = await this.createGRInventoryProduct(
-          grDetailId,
-          productId,
-          data,
-          userId
-        );
-        const location = await this.createOrFindLocation(data, userId);
-        const unit = await this.createOrFindUnit(data, userId);
-        const itAssetsCategory = await prisma.category.findFirst({
-          where: {
-            name: {
-              equals: "IT Assets",
-            },
-          },
+      // Check for duplicate asset tag early
+      const assetTag = data["Asset Tag"];
+      if (assetTag) {
+        const existingAsset = await prisma.inventoryProductDetail.findUnique({
+          where: { uuid: assetTag }
         });
-
-        if (!itAssetsCategory) {
-          throw new Error("IT Assets category not found");
+        if (existingAsset) {
+          return {
+            success: false,
+            message: `Asset tag ${assetTag} already exists in the system (Duplicate skipped).`,
+          };
         }
-        
-        // Step 4: Create Inventory Product Detail
+      }
+
+      // Step 1: Create or find product
+      const productId = await this.createOrFindProduct(data, userId);
+
+      // Step 2: Create or find GR Detail
+      const grDetailId = await this.createOrFindGRDetail(data, userId);
+
+      // Step 3: Create GR Inventory Product
+      const inventoryProductId = await this.createGRInventoryProduct(
+        grDetailId,
+        productId,
+        data,
+        userId
+      );
+      const location = await this.createOrFindLocation(data, userId);
+      const unit = await this.createOrFindUnit(data, userId);
+      let itAssetsCategory = await prisma.category.findFirst({
+        where: {
+          name: {
+            equals: "IT Assets",
+          },
+        },
+      });
+
+      if (!itAssetsCategory) {
+        const catUuid = await generateNextCode(prisma.category, "uuid", "CAT-");
+        itAssetsCategory = await prisma.category.create({
+          data: {
+            name: "IT Assets",
+            uuid: catUuid,
+            createdBy: userId,
+            updatedBy: userId
+          }
+        });
+      }
+
+      // Step 4: Create Inventory Product Detail(s) based on the uploaded quantity
+      const inventoryProductRecord = await prisma.gRInventoryProduct.findUnique({
+        where: { id: inventoryProductId },
+        select: { quantity: true },
+      });
+      const quantityToCreate = Math.max(1, Number(inventoryProductRecord?.quantity ?? 1));
+      const createdInventoryDetailIds: number[] = [];
+
+      for (let detailIndex = 0; detailIndex < quantityToCreate; detailIndex++) {
         const inventoryDetailId = await this.createInventoryProductDetail(
           inventoryProductId,
           data,
           userId,
           grDetailId,
           unit.id,
-          location
-          );
+          location,
+          detailIndex
+        );
+        createdInventoryDetailIds.push(inventoryDetailId);
 
-        // Create product specifications
         await this.createProductSpecValues(inventoryDetailId, data, userId);
 
-        // Install software
-        await this.installSoftware(inventoryDetailId, data, userId);
+        const hasSoftwareDetails = Object.entries({
+          AV: data["AV"],
+          Proxy: data["Proxy"],
+          "IP Address": data["IP Address"],
+          Domain: data["Domain"],
+          "Host Name": data["Hostname"],
+          "Bit Locker": data["Bitlocker"],
+          "MAC Address": data["MAC Address"],
+          "OS Service Pack": data["OS Service Pack"],
+          "OS Version": data["OS Version"],
+          OS: data["OS"],
+        }).some(([, value]) => typeof value === "string" && value.trim());
 
-        // Create product assignment if user exists
-        const assignmentId = await this.createProductAssignment(
-          inventoryDetailId,
-          data,
-          userId
-        );
+        if (hasSoftwareDetails) {
+          await this.installSoftware(inventoryDetailId, data, userId);
+        }
 
-        return {
-          success: true,
-          message: `Asset imported successfully for ${data.Model} Asset tag ${data["Asset Tag"]}`,
-          data: {
-            productId,
-            grDetailId,
-            inventoryProductId,
-            inventoryDetailId,
-            assignmentId: assignmentId || undefined,
-          },
-        };
-      });
+        await this.createProductAssignment(inventoryDetailId, data, userId);
+      }
+
+      return {
+        success: true,
+        message: `Asset imported successfully for ${data.Model} Asset tag ${data["Asset Tag"]}`,
+        data: {
+          productId,
+          grDetailId,
+          inventoryProductId,
+          inventoryDetailId: createdInventoryDetailIds[0],
+          assignmentId: undefined,
+        },
+      };
     } catch (error) {
       console.error("Error importing asset:", error);
       return {
@@ -839,8 +1075,10 @@ export class AssetImportService {
   async bulkImportAssets(req: Request, res: Response) {
     const results: ImportResult[] = [];
     const { data: assetsData } = req.body;
-    const userId = parseInt(req?.user?.id ?? "0");
-    for (const asset of assetsData) {
+    const userId = parseInt((req as Request & { user?: { id?: string } })?.user?.id ?? "0");
+    for (let asset of assetsData) {
+      asset = normalizeUploadedAssetRow(asset);
+
       try {
         const result = await this.importAsset(asset, userId);
         results.push(result);
@@ -898,7 +1136,7 @@ export const oldDataSync = async (
     const [headers, ...dataRows] = rows;
     const formatted = dataRows.map(
       (row: any[], index: number) =>
-        headers.reduce(
+        normalizeUploadedAssetRow(headers.reduce(
           (obj: any, header: string, headerIndex: number) => {
             const value = row[headerIndex] ?? null;
             // Handle rich text objects (like hyperlinks from Excel)
@@ -914,7 +1152,7 @@ export const oldDataSync = async (
             return obj;
           },
           { rowIndex: index + 2 }
-        ) // +2 because: +1 for header row, +1 for 1-based indexing
+        )) // +2 because: +1 for header row, +1 for 1-based indexing
     );
 
     // Get existing assets from database
@@ -927,12 +1165,12 @@ export const oldDataSync = async (
 
     const existingAssetTags = new Set(
       existingAssets
-        .map((a) => a.uuid?.toString().trim().toLowerCase())
+        .map((a) => a.uuid?.toString()?.trim().toLowerCase())
         .filter(Boolean)
     );
     const existingSerialNumbers = new Set(
       existingAssets
-        .map((a) => a.serialNo1?.toString().trim().toLowerCase())
+        .map((a) => a.serialNo1?.toString()?.trim().toLowerCase())
         .filter(Boolean)
     );
 
@@ -964,11 +1202,11 @@ export const oldDataSync = async (
 
     for (let i = 0; i < formatted.length; i++) {
       const item = formatted[i];
-      const rowIndex = item.rowIndex;
+      const rowIndex = Number(item.rowIndex);
 
       // Get and normalize values
-      const assetTag = item["Asset Tag"]?.toString().trim();
-      const serialNumber = item["Serial Number"]?.toString().trim();
+      const assetTag = item['Asset Tag']?.toString()?.trim();
+      const serialNumber = item['Serial Number']?.toString()?.trim();
       const acquisitionDate = item["Acquisition Date (PO)"];
       const assignedOn = item["Assigned On"];
       const poNumber = item["PO Number"];

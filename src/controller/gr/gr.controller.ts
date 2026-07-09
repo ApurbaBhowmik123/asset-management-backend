@@ -49,7 +49,7 @@ export const createGr = async (
       select: { id: true, abbriviatedName: true, name: true },
     });
     const locationAbbr = location?.abbriviatedName ?? location?.name.slice(0, 3).toUpperCase() ?? "N/A";
-    
+
     const unit = await prisma.unit.findFirst({
       where: { id: Number(unitId) },
       select: { id: true, abbriviatedName: true, name: true, identificationNumber: true },
@@ -131,48 +131,48 @@ export const createGr = async (
           `${locationAbbr}-${specAbbr}-`,
           4
         );
-          const createdDetail = await prisma.inventoryProductDetail.create({
-            data: {
-              grInventoryProductId: grInventoryProduct.id,
-              uuid: AssetId,
-              unitId: Number(unitId),
-              locationId: Number(locationId),
-              assignedStatus: trackingType.toUpperCase() === "NON_TRACKABLE" || trackingType === "Non-Trackable" ? "InStock" : "Untagged",
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          });
+        const createdDetail = await prisma.inventoryProductDetail.create({
+          data: {
+            grInventoryProductId: grInventoryProduct.id,
+            uuid: AssetId,
+            unitId: Number(unitId),
+            locationId: Number(locationId),
+            assignedStatus: trackingType.toUpperCase() === "NON_TRACKABLE" || trackingType === "Non-Trackable" ? "InStock" : "Untagged",
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
 
-          // Generate QR code
-          const qrCodeUrl = await generateQRCode({
-            inventoryProductDetailId: createdDetail.uuid,
-            grId: String(grDetail.id),
-          });
+        // Generate QR code
+        const qrCodeUrl = await generateQRCode({
+          inventoryProductDetailId: createdDetail.uuid,
+          grId: String(grDetail.id),
+        });
 
-          await prisma.inventoryProductQr.create({
-            data: {
-              uuid: await generateNextCode(
-                prisma.inventoryProductQr,
-                "uuid",
-                "mg-qr-"
-              ),
-              inventoryProductDetailId: createdDetail.id,
-              qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""), // Store relative path
-            }
-          });
+        await prisma.inventoryProductQr.create({
+          data: {
+            uuid: await generateNextCode(
+              prisma.inventoryProductQr,
+              "uuid",
+              "mg-qr-"
+            ),
+            inventoryProductDetailId: createdDetail.id,
+            qrCodeUrl: qrCodeUrl.replace(process.env.APP_URL || "", ""), // Store relative path
+          }
+        });
 
-          // Create LogReport entry for Asset Initialization (GR)
-          await createLogReport(
-            createdDetail.uuid,
-            createdDetail.id,
-            product.description ? `Received via GR: ${product.description}` : "Received via GR",
-            new Date(),
-            "create gr",
-            userId,
-            null,
-            `${process.env.FRONTEND_URL}/product-details/${createdDetail.uuid}`,
-            "InStock"
-          );
+        // Create LogReport entry for Asset Initialization (GR)
+        await createLogReport(
+          createdDetail.uuid,
+          createdDetail.id,
+          product.description ? `Received via GR: ${product.description}` : "Received via GR",
+          new Date(),
+          "create gr",
+          userId,
+          null,
+          `${process.env.FRONTEND_URL}/product-details/${createdDetail.uuid}`,
+          "InStock"
+        );
       }
     }
 
@@ -201,7 +201,7 @@ export const getGr = async (
 
     const allowedSortFields = ["sapId", "sapDate", "grDate", "createdAt", "updatedAt"];
     const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
-    
+
     const userId = parseInt(req.user?.id ?? "0");
     if (isNaN(userId)) {
       return next(new ErrorHandler("Invalid user ID", 400));
@@ -237,7 +237,7 @@ export const getGr = async (
 
     if (locationId || brandId || unitFilter) {
       baseWhere.inventoryProducts = { some: {} };
-      
+
       if (brandId) {
         baseWhere.inventoryProducts.some.brandId = brandId;
       }
@@ -277,6 +277,7 @@ export const getGr = async (
           ratePerPiece: true,
           freeQty: true,
           totalAmount: true,
+          warrantyTill: true,
           product: {
             select: { name: true },
           },
@@ -376,9 +377,9 @@ export const getGrById = async (
           ...id,
           qrCode: id.qrCode
             ? {
-                ...id.qrCode,
-                qrCodeUrl: cleanUrl(id.qrCode.qrCodeUrl),
-              }
+              ...id.qrCode,
+              qrCodeUrl: cleanUrl(id.qrCode.qrCodeUrl),
+            }
             : null,
         })),
       })),
@@ -763,7 +764,7 @@ export const bulkTagItem = async (
 ) => {
   try {
     const { items } = req.body;
-    
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return next(new ErrorHandler("Items array is required", 400));
     }
@@ -783,10 +784,10 @@ export const bulkTagItem = async (
 
         const inventoryDetail = await tx.inventoryProductDetail.findUnique({
           where: { id: Number(inventoryProductDetailId) },
-          include: { 
+          include: {
             grInventoryProduct: {
               include: { grDetails: true }
-            } 
+            }
           }
         });
 
@@ -800,7 +801,7 @@ export const bulkTagItem = async (
             serialNo1: serialNo1 ?? null,
             sapCode: sapCode ?? null,
             modelName: modelName ?? null,
-            assignedStatus: "InStock",
+            assignedStatus: inventoryDetail.isUsed ? "Assigned" : "InStock",
             updatedBy: userId,
           }
         });
@@ -874,6 +875,9 @@ export const bulkTagItem = async (
           });
         }
       }
+    }, {
+      maxWait: 10000,
+      timeout: 30000,
     });
 
     return successResponse(res, 200, "Items tagged successfully", null, null);
@@ -897,7 +901,7 @@ export const tagItem = async (
       warrantyTill,
       specValues
     } = req.body;
-    
+
     const userId = parseInt(req.user?.id ?? "0");
 
     const inventoryDetail = await prisma.inventoryProductDetail.findUnique({
@@ -957,7 +961,7 @@ export const tagItem = async (
             assignedStatus: "Untagged",
           }
         });
-        
+
         if (untaggedCount === 0) {
           await tx.gRDetail.update({
             where: { id: grDetailsId },

@@ -456,6 +456,20 @@ export const getAssignList = async (
 
     let assignments = null;
     let totalCount = 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Only filter out expired items for the active Assign List views
+    const shouldFilterExpired = !requestedStatus || requestedStatus === AssignmentStatus.Handovered || requestedStatus === AssignmentStatus.Active;
+    
+    const dateFilter = shouldFilterExpired ? {
+      OR: [
+        { endDate: { gte: today } },
+        { endDate: null }
+      ]
+    } : {};
+
     if (user.roles.some((role) => role.name === "Super Admin")) {
       assignments = await prisma.productAssignment.findMany({
         where: {
@@ -463,6 +477,7 @@ export const getAssignList = async (
             in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
+          AND: [dateFilter],
         },
 
         select: {
@@ -568,6 +583,7 @@ export const getAssignList = async (
             in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
+          AND: [dateFilter],
         },
       });
     } else {
@@ -577,6 +593,7 @@ export const getAssignList = async (
             in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
+          AND: [dateFilter],
           inventoryProductDetail: {
             unit: {
               id: Number(user.unitId),
@@ -667,6 +684,7 @@ export const getAssignList = async (
             in: requestedStatus ? [requestedStatus as any] : [AssignmentStatus.Handovered],
           },
           ...searchFilter,
+          AND: [dateFilter],
           inventoryProductDetail: {
             unit: {
               id: Number(user.unitId),
@@ -691,6 +709,135 @@ export const getAssignList = async (
   }
 };
 
+
+export const getExpiredAssignList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const sortBy = (req.query.sortBy as string) || "createdAt";
+    const sortOrder = req.query.sortOrder === "asc" ? "asc" : "desc";
+    const userId = parseInt(req.user?.id ?? "0");
+    if (isNaN(userId)) {
+      return next(new ErrorHandler("Invalid user ID", 400));
+    }
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+        status: true,
+      },
+      include: {
+        roles: true,
+      },
+    });
+    if (!user) {
+      return next(
+        new ErrorHandler("You have no permission to access this resource", 404)
+      );
+    }
+
+    const searchFilter = search
+      ? {
+        OR: [
+          { assignedId: { contains: search } },
+          { assignedToUser: { name: { contains: search } } },
+        ],
+      }
+      : {};
+
+    const allowedSortFields = ["assignedId", "status", "uuid", "createdAt"];
+    const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+
+    let assignments = null;
+    let totalCount = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const baseWhere = {
+      ...searchFilter,
+      endDate: { lt: today },
+      status: {
+        in: [AssignmentStatus.Active, AssignmentStatus.Handovered],
+      },
+    };
+
+    if (user.roles.some((role) => role.name === "Super Admin")) {
+      assignments = await prisma.productAssignment.findMany({
+        where: baseWhere,
+        select: {
+          assignedId: true,
+          id: true,
+          status: true,
+          uuid: true,
+          createdAt: true,
+          startDate: true,
+          endDate: true,
+          assignedToUser: {
+            select: { id: true, uuid: true, name: true, unit: { select: { name: true } }, location: { select: { name: true } } },
+          },
+          assignedToLocation: {
+            select: { name: true, id: true, unitlocation: { select: { unit: { select: { name: true } } } } },
+          },
+          inventoryProductDetail: {
+            select: { id: true, uuid: true, assignedStatus: true, unit: { select: { id: true } } },
+          },
+        },
+        orderBy: { [finalSortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      totalCount = await prisma.productAssignment.count({ where: baseWhere });
+    } else {
+      assignments = await prisma.productAssignment.findMany({
+        where: {
+          ...baseWhere,
+          inventoryProductDetail: { unit: { id: Number(user.unitId) } },
+        },
+        select: {
+          assignedId: true,
+          id: true,
+          status: true,
+          uuid: true,
+          createdAt: true,
+          assignedToUser: {
+            select: { id: true, uuid: true, name: true, unit: { select: { name: true } }, location: { select: { name: true } } },
+          },
+          assignedToLocation: {
+            select: { name: true, id: true, unitlocation: { select: { unit: { select: { name: true } } } } },
+          },
+        },
+        orderBy: { [finalSortBy]: sortOrder },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      totalCount = await prisma.productAssignment.count({
+        where: {
+          ...baseWhere,
+          inventoryProductDetail: { unit: { id: Number(user.unitId) } },
+        },
+      });
+    }
+
+    return successResponse(
+      res,
+      200,
+      "Expired assignments retrieved successfully",
+      createPagedResponse(assignments, page, limit, totalCount),
+      null
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+    return next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+
 export const getAssignDetails = async (
   req: Request,
   res: Response,
@@ -714,6 +861,7 @@ export const getAssignDetails = async (
         inventoryProductDetail: {
           include: {
             unit: true,
+            location: true,
             grInventoryProduct: {
               include: {
                 product: {
@@ -727,6 +875,8 @@ export const getAssignDetails = async (
                     },
                   },
                 },
+                category: true,
+                brand: true,
                 grDetails: {
                   include: {
                     vendor: true,
@@ -810,7 +960,7 @@ export const getAssignDetails = async (
         return {
           inventorProductId: assignment.inventoryProductDetail.id,
           id: grProduct.product?.id || null,
-          name: grProduct.product?.name || "Unknown Product",
+          name: grProduct.product?.name || grProduct.category?.name || "Unknown Product",
           brand: grProduct.product?.brand || grProduct.brand || null,
           category: grProduct.product?.category || grProduct.category || null,
           subcategory: grProduct.product?.subcategory || null,
@@ -818,8 +968,10 @@ export const getAssignDetails = async (
           serialNo2: assignment.inventoryProductDetail.serialNo2,
           qrCode: assignment.inventoryProductDetail.qrCode?.qrCodeUrl,
           grDetails: grProduct.grDetails,
+          unit: assignment.inventoryProductDetail.unit || null,
+          location: assignment.inventoryProductDetail.location || null,
           softwareInstalls: assignment.inventoryProductDetail.softwareInstalls,
-          specValues: assignment.inventoryProductDetail.specValues?.length ? assignment.inventoryProductDetail.specValues : grProduct.product.productSpecValue,
+          specValues: assignment.inventoryProductDetail.specValues?.length ? assignment.inventoryProductDetail.specValues : (grProduct.product?.productSpecValue || []),
         };
       }),
     };

@@ -237,6 +237,7 @@ export const fetchAssignableProducList = async (
             AssignedStatus.BLOCKED,
             AssignedStatus.WRITE_OFF,
             AssignedStatus.E_WASTE,
+            AssignedStatus.SCRAP,
           ],
         },
       }
@@ -611,6 +612,10 @@ export const fetchAssignDetailsSingle = async (
       include: {
         inventoryProductDetail: {
           include: {
+            productUnassignments: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
             unit: true,
             grInventoryProduct: {
               include: {
@@ -712,6 +717,8 @@ export const fetchAssignDetailsSingle = async (
           qrCode: assignment.inventoryProductDetail.qrCode?.qrCodeUrl,
           grDetails: grProduct.grDetails,
           softwareInstalls: assignment.inventoryProductDetail.softwareInstalls,
+          unassignRemark: assignment.inventoryProductDetail.productUnassignments?.[0]?.remarks || null,
+          unassignCondition: assignment.inventoryProductDetail.productUnassignments?.[0]?.condition || null,
         };
       }),
     };
@@ -788,7 +795,7 @@ export const getFilterMatrix = async (
     const baseWhere: any = {
       status: true,
       assignedStatus: {
-        notIn: ["ASSIGNED", "BLOCKED", "WRITE_OFF", "E_WASTE"],
+        notIn: ["ASSIGNED", "BLOCKED", "WRITE_OFF", "E_WASTE", "SCRAP"],
       },
     };
 

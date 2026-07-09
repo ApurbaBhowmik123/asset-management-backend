@@ -294,6 +294,7 @@ export const unassignAsset = async (
       approvedBy,
       approvedDate,
       remarks,
+      conditions,
     } = req.body;
     const userId = parseInt(req?.user?.id ?? "0");
     if (
@@ -304,6 +305,16 @@ export const unassignAsset = async (
         new ErrorHandler("Invalid or empty inventory product IDs", 400)
       );
     }
+    
+    let documentUrl = "";
+    if (req.file) {
+      const { uploadFiles } = require("@src/helpers/uploadFiles");
+      const uploadedFiles = await uploadFiles("unassign-docs", req.file);
+      if (uploadedFiles.length > 0) {
+        documentUrl = process.env.APP_URL ? `${process.env.APP_URL}${uploadedFiles[0]}` : uploadedFiles[0];
+      }
+    }
+
     await prisma.productAssignment.updateMany({
       where: {
         inventoryProductDetailId: { in: inventoryProductIds },
@@ -323,7 +334,7 @@ export const unassignAsset = async (
         assignedId: { in: assignmentIds },
       },
     });
-        const updatedInventoryDetails =
+    const updatedInventoryDetails =
       await prisma.inventoryProductDetail.findMany({
         where: {
           id: { in: inventoryProductIds },
@@ -340,7 +351,11 @@ export const unassignAsset = async (
           },
         },
       });
-    for (const inventoryProductId of inventoryProductIds) {
+      
+    for (let i = 0; i < inventoryProductIds.length; i++) {
+      const inventoryProductId = inventoryProductIds[i];
+      const condition = Array.isArray(conditions) ? conditions[i] : null;
+
       const productUnassignment = await prisma.productUnAssignment.create({
         data: {
           uuid: await generateNextCode(
@@ -352,6 +367,8 @@ export const unassignAsset = async (
           approvedById: Number(approvedBy),
           unassignmentDate: new Date(approvedDate),
           remarks: remarks,
+          condition: condition,
+          documentUrl: documentUrl || null,
           createdById: userId,
         },
       });
@@ -365,6 +382,7 @@ export const unassignAsset = async (
             userId: userId,
             details: JSON.stringify({
               productUnassignmentId: productUnassignment.id,
+              condition: condition
             }),
           },
         });
